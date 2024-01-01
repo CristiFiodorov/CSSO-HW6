@@ -41,31 +41,7 @@ VOID printInfoHeaderData(BITMAPINFOHEADER bMapInfoHeader) {
 	printf("biClrImportant: %d\n", bMapInfoHeader.biClrImportant);
 }
 
-DWORD SetFileReadPermissionOnly(LPSTR filename) {
-	DWORD sizeOfPSID = SECURITY_MAX_SID_SIZE;
-	PSID pEveryoneSID = (PSID) new BYTE[sizeOfPSID];
-	CHECK(CreateWellKnownSid(WinWorldSid, NULL, pEveryoneSID, &sizeOfPSID), 
-		-1, "Error at creating a wellknown SID", delete[] pEveryoneSID);
-
-	EXPLICIT_ACCESS eaDeny;
-	memset(&eaDeny, 0, sizeof(EXPLICIT_ACCESS));
-	eaDeny.grfAccessPermissions = GENERIC_ALL;
-	eaDeny.grfAccessMode = DENY_ACCESS;
-	eaDeny.grfInheritance = NO_INHERITANCE;
-	eaDeny.Trustee.TrusteeForm = TRUSTEE_IS_SID;
-	eaDeny.Trustee.TrusteeType = TRUSTEE_IS_WELL_KNOWN_GROUP;
-	eaDeny.Trustee.ptstrName = (LPSTR)pEveryoneSID;
-
-
-	PACL pACL1;
-	CHECK(SetEntriesInAcl(1, &eaDeny, NULL, &pACL1) == ERROR_SUCCESS, -1, "Fail to set entry in ACL", 
-		LocalFree(pACL1), delete[] pEveryoneSID);
-	CHECK(SetNamedSecurityInfo(filename, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pACL1, NULL) == ERROR_SUCCESS, 
-		-1, "Error in function SetNamedSecurityInfo", LocalFree(pACL1), delete[] pEveryoneSID);
-	LocalFree(pACL1);
-	delete[] pEveryoneSID;
-
-
+DWORD setFileReadPermissionOnly(LPSTR filename) {
 	HANDLE hToken;
 	CHECK(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken), -1, "Failed to open process token");
 	DWORD dwBufferSize = 0;
@@ -74,6 +50,7 @@ DWORD SetFileReadPermissionOnly(LPSTR filename) {
 	CHECK(GetTokenInformation(hToken, TokenUser, pTokenUser, dwBufferSize, &dwBufferSize), -1,
 		"Failed GetTokenInformation", CLOSE_HANDLES(hToken); delete[] pTokenUser);
 	CLOSE_HANDLES(hToken);
+
 
 	EXPLICIT_ACCESS eaAllow;
 	memset(&eaAllow, 0, sizeof(EXPLICIT_ACCESS));
@@ -84,15 +61,15 @@ DWORD SetFileReadPermissionOnly(LPSTR filename) {
 	eaAllow.Trustee.TrusteeType = TRUSTEE_IS_USER;
 	eaAllow.Trustee.ptstrName = (LPSTR)pTokenUser->User.Sid;
 
+	PACL pACL;
+	CHECK(SetEntriesInAcl(1, &eaAllow, NULL, &pACL) == ERROR_SUCCESS, -1, "Fail to set entries in ACL",
+		LocalFree(pACL), delete[] pTokenUser);
 
-	PACL pACL2;
-	CHECK(SetEntriesInAcl(1, &eaAllow, NULL, &pACL2) == ERROR_SUCCESS, -1, "Fail to set entry in ACL", 
-		LocalFree(pACL2), delete[] pTokenUser);
-	CHECK(SetNamedSecurityInfo(filename, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION, NULL, NULL, pACL2, NULL) == ERROR_SUCCESS,
-		-1, "Error in function SetNamedSecurityInfo", LocalFree(pACL2), delete[] pTokenUser);
+	CHECK(SetNamedSecurityInfo(filename, SE_FILE_OBJECT, DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, pACL, NULL) == ERROR_SUCCESS,
+		-1, "Error in function SetNamedSecurityInfo", LocalFree(pACL), delete[] pTokenUser);
 
 	delete[] pTokenUser;
-	LocalFree(pACL2);
+	LocalFree(pACL);
 
 	return 0;
 }
@@ -165,7 +142,7 @@ DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, LPCSTR operation
 
 	sprintf_s(resultImagePath, "%s\\%s_%s_%d.bmp", RESULTS_SEQ_FOLDER, imageName, operationName, elapsedMilliseconds);
 	CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
-	SetFileReadPermissionOnly(resultImagePath);
+	setFileReadPermissionOnly(resultImagePath);
 
 	return 0;
 }
