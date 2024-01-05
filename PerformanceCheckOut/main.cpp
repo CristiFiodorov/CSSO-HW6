@@ -5,6 +5,8 @@
 #include <Aclapi.h>
 #include <sddl.h>
 #include <winnt.h>
+#include <string>
+#include <format>
 
 
 #pragma comment(lib, "Shlwapi.lib")
@@ -56,13 +58,14 @@ PTOKEN_USER getCurrentUserToken() {
     return pTokenUser;
 }
 
-DWORD printCurrentUserSid() {
+DWORD getStringCurrentUserSid(std::string& output) {
     PTOKEN_USER pTokenUser = getCurrentUserToken();
     CHECK(pTokenUser, -1, "Failed to extract the current user token", delete[] pTokenUser);
 
     LPSTR szUserSid;
     CHECK(ConvertSidToStringSid(pTokenUser->User.Sid, &szUserSid), -1, "Could not obtain the string representation of a SID", delete[] pTokenUser);
-    printf("Current user SID: %s\n", szUserSid);
+    
+    output += std::format("Current user SID: {}\n", szUserSid);
 
     LocalFree(szUserSid);
     delete[] pTokenUser;
@@ -77,21 +80,21 @@ PSID getWellKnownSid(WELL_KNOWN_SID_TYPE sidType) {
     return pSID;
 }
 
-DWORD printWellKnownSid(WELL_KNOWN_SID_TYPE sidType, LPCSTR label) {
+DWORD getStringWellKnownSid(WELL_KNOWN_SID_TYPE sidType, LPCSTR label, std::string& output) {
     PSID pSid = getWellKnownSid(sidType);
     CHECK(pSid, -1, "Failed to extract the everyone group sid");
 
     LPSTR szSid;
     CHECK(ConvertSidToStringSid(pSid, &szSid), -1, "Could not obtain the string representation of a SID", delete[] pSid);
 
-    printf("%s SID: %s\n", label, szSid);
+    output += std::format("{} SID: {}\n", label, szSid);
 
     LocalFree(szSid);
     delete[] pSid;
     return 0;
 }
 
-DWORD printProcessorMasksAndRelationships() {
+DWORD getStringProcessorMasksAndRelationships(std::string& output) {
     LPFN_GLPI glpi = (LPFN_GLPI)GetProcAddress(GetModuleHandle(TEXT("kernel32")), "GetLogicalProcessorInformation");
     CHECK(glpi, -1, "GetLogicalProcessorInformation function is not supported");
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION buffer = NULL;
@@ -116,22 +119,22 @@ DWORD printProcessorMasksAndRelationships() {
 
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION ptr = buffer;
     while (byteOffset + sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION) <= returnLength) {
-        printf("Processor Mask: 0x%llx\n", ptr->ProcessorMask);
+        output += std::format("Processor Mask: {}\n", ptr->ProcessorMask);
         switch (ptr->Relationship) {
         case RelationProcessorCore:
-            printf("Relationship: RelationProcessorCore\n");
+            output += std::format("Relationship: RelationProcessorCore\n");
             break;
         case RelationNumaNode:
-            printf("Relationship: RelationNumaNode\n");
+            output += std::format("Relationship: RelationNumaNode\n");
             break;
         case RelationCache:
-            printf("Relationship: RelationCache\n");
+            output += std::format("Relationship: RelationCache\n");
             break;
         case RelationProcessorPackage:
-            printf("Relationship: RelationProcessorPackage\n");
+            output += std::format("Relationship: RelationProcessorPackage\n");
             break;
         default:
-            printf("Relationship: Unknown\n");
+            output += std::format("Relationship: Unknown\n");
             break;
         }
         byteOffset += sizeof(SYSTEM_LOGICAL_PROCESSOR_INFORMATION);
@@ -142,26 +145,26 @@ DWORD printProcessorMasksAndRelationships() {
     return 0;
 }
 
-DWORD printAffinityMasksAndNumaNodesCounts() {
+DWORD getStringAffinityMasksAndNumaNodesCounts(std::string& output) {
     PDWORD_PTR processAffinityMask, systemAffinityMask;
     processAffinityMask = (PDWORD_PTR)malloc(sizeof(DWORD_PTR));
     systemAffinityMask = (PDWORD_PTR)malloc(sizeof(DWORD_PTR));
 
     CHECK(GetProcessAffinityMask(GetCurrentProcess(), processAffinityMask, systemAffinityMask), -1, "Could not extract affinity masks");
-    printf("Current Process' affinity mask: 0x%llx\n", *processAffinityMask);
-    printf("Current System's affinity mask: 0x%llx\n", *systemAffinityMask);
+    output += std::format("Current Process' affinity mask: {}\n", *processAffinityMask);
+    output += std::format("Current System's affinity mask: {}\n", *systemAffinityMask);
     
     ULONG highestNodeNumber;
 
     CHECK(GetNumaHighestNodeNumber(&highestNodeNumber), -1, "Could not extract the highest numa node");
-    printf("Number of NUMA nodes: %lu\n", highestNodeNumber + 1);
+    output += std::format("Number of NUMA nodes: {}\n", highestNodeNumber + 1);
 
     free(processAffinityMask);
     free(systemAffinityMask);
     return 0;
 }
 
-DWORD printProcessDefaultCpuSetsInformation() {
+DWORD getStringProcessDefaultCpuSetsInformation(std::string& output) {
     ULONG returnedLength;
     PULONG cpuSetIds = NULL;
     ULONG bufferSize = 0;
@@ -184,22 +187,22 @@ DWORD printProcessDefaultCpuSetsInformation() {
     PULONG ptr = cpuSetIds;
     DWORD index = 0;
 
-    printf("Process Deafult Cpu Information:\n");
+    output += std::format("Process Deafult Cpu Information:\n");
     while (byteOffset + sizeof(ULONG) <= bufferSize) {
-        printf("Entry %d: %d\n", index, *ptr);
+        output += std::format("Entry {}: {}\n", index, *ptr);
         
         index++;
         ptr++;
         byteOffset += sizeof(ULONG);
     }
 
-    printf("Number of cpuSetIds elements processed: %d\n", index);
+    output += std::format("Number of cpuSetIds elements processed: {}\n", index);
     free(cpuSetIds);
     return 0;
 }
 
 
-DWORD printSystemCpuSetsInformation() {
+DWORD getStringSystemCpuSetsInformation(std::string& output) {
     ULONG returnedLength;
     PSYSTEM_CPU_SET_INFORMATION cpuSetIds = NULL;
     ULONG bufferSize = 0;
@@ -222,39 +225,39 @@ DWORD printSystemCpuSetsInformation() {
     PSYSTEM_CPU_SET_INFORMATION ptr = cpuSetIds;
     DWORD index = 0;
 
-    printf("System Cpu Information:\n");
+    output += std::format("System Cpu Information:\n");
     while (byteOffset + ptr->Size <= bufferSize) {
-        printf("Entry #%d\n", index);
-        printf("    Id: %lu\n", ptr->CpuSet.Id);
-        printf("    Group: %u\n", ptr->CpuSet.Group);
-        printf("    LogicalProcessorIndex: %u\n", ptr->CpuSet.LogicalProcessorIndex);
-        printf("    CoreIndex: %u\n", ptr->CpuSet.CoreIndex);
-        printf("    LastLevelCacheIndex: %u\n", ptr->CpuSet.LastLevelCacheIndex);
-        printf("    NumaNodeIndex: %u\n", ptr->CpuSet.NumaNodeIndex);
-        printf("    EfficiencyClass: %u\n", ptr->CpuSet.EfficiencyClass);
+        output += std::format("Entry #{}\n", index);
+        output += std::format("    Id: {}\n", ptr->CpuSet.Id);
+        output += std::format("    Group: {}\n", ptr->CpuSet.Group);
+        output += std::format("    LogicalProcessorIndex: {}\n", ptr->CpuSet.LogicalProcessorIndex);
+        output += std::format("    CoreIndex: {}\n", ptr->CpuSet.CoreIndex);
+        output += std::format("    LastLevelCacheIndex: {}\n", ptr->CpuSet.LastLevelCacheIndex);
+        output += std::format("    NumaNodeIndex: {}\n", ptr->CpuSet.NumaNodeIndex);
+        output += std::format("    EfficiencyClass: {}\n", ptr->CpuSet.EfficiencyClass);
 
-        printf("    AllFlags: 0x%x\n", ptr->CpuSet.AllFlags);
-        printf("    Parked: %u\n", ptr->CpuSet.Parked);
-        printf("    Allocated: %u\n", ptr->CpuSet.Allocated);
-        printf("    AllocatedToTargetProcess: %u\n", ptr->CpuSet.AllocatedToTargetProcess);
-        printf("    RealTime: %u\n", ptr->CpuSet.RealTime);
-        printf("    ReservedFlags: %u\n", ptr->CpuSet.ReservedFlags);
+        output += std::format("    AllFlags: 0x{}\n", ptr->CpuSet.AllFlags);
+        output += std::format("    Parked: {}\n", (BYTE)ptr->CpuSet.Parked);
+        output += std::format("    Allocated: {}\n", (BYTE)ptr->CpuSet.Allocated);
+        output += std::format("    AllocatedToTargetProcess: {}\n", (BYTE)ptr->CpuSet.AllocatedToTargetProcess);
+        output += std::format("    RealTime: {}\n", (BYTE)ptr->CpuSet.RealTime);
+        output += std::format("    ReservedFlags: {}\n", (BYTE)ptr->CpuSet.ReservedFlags);
 
-        printf("    Reserved: %lu\n", ptr->CpuSet.Reserved);
-        printf("    SchedulingClass: %u\n", ptr->CpuSet.SchedulingClass);
+        output += std::format("    Reserved: {}\n", ptr->CpuSet.Reserved);
+        output += std::format("    SchedulingClass: {}\n", ptr->CpuSet.SchedulingClass);
 
         index++;
         byteOffset += ptr->Size;
         ptr++;
     }
 
-    printf("The number of CPU_SET_INFORMATION structures processed: %d\n", index);
+    output += std::format("The number of CPU_SET_INFORMATION structures processed: {}\n", index);
     free(cpuSetIds);
 }
 
-DWORD printCpuSetsInformation() {
-    CHECK(printProcessDefaultCpuSetsInformation() == 0, -1, "Failed to print process default cpu sets information");
-    CHECK(printSystemCpuSetsInformation() == 0, -1, "Failed to print system cpu sets information");
+DWORD getStringCpuSetsInformation(std::string& output) {
+    CHECK(getStringProcessDefaultCpuSetsInformation(output) == 0, -1, "Failed to print process default cpu sets information");
+    CHECK(getStringSystemCpuSetsInformation(output) == 0, -1, "Failed to print system cpu sets information");
 }
 
 DWORD setFileReadPermissionOnly(LPSTR filename) {
@@ -386,17 +389,27 @@ DWORD applySequentialImageTransform(LPCSTR imagePath) {
 
     CHECK(applyImageTransformation(hImage, imageName, SZ_INVERT_BYTE_OPERATION, bMapFileHeader, bMapInfoHeader, applyInvertBytesTransform) == 0, -1, "Grayscale Transformation Failed",
         CLOSE_HANDLES(hImage));
-    CloseHandle(hImage);
+    CLOSE_HANDLES(hImage);
     return 0;
 }
 
-DWORD printComputerCharacteristics() {
-    CHECK(printCurrentUserSid() == 0, -1, "Could not print the current user SID");
-    CHECK(printWellKnownSid(WinWorldSid, "Everyone Group") == 0, -1, "Could not print the everyone group SID");
-    CHECK(printWellKnownSid(WinBuiltinAdministratorsSid, "Administrators Group") == 0, -1, "Could not print the administrators group SID");
-    CHECK(printProcessorMasksAndRelationships() == 0, -1, "Could not print processor masks and relationships");
-    CHECK(printAffinityMasksAndNumaNodesCounts() == 0, -1, "Could not print affinity masks and numa nodes count");
-    CHECK(printCpuSetsInformation() == 0, -1, "Could not print CPU sets information");
+DWORD writeComputerCharacteristics(LPCSTR filePath) {
+    std::string computerCharacteristics;
+    computerCharacteristics.reserve(1000);
+    CHECK(getStringCurrentUserSid(computerCharacteristics) == 0, -1, "Could not print the current user SID");
+    CHECK(getStringWellKnownSid(WinWorldSid, "Everyone Group", computerCharacteristics) == 0, -1, "Could not print the everyone group SID");
+    CHECK(getStringWellKnownSid(WinBuiltinAdministratorsSid, "Administrators Group", computerCharacteristics) == 0, -1, "Could not print the administrators group SID");
+    CHECK(getStringProcessorMasksAndRelationships(computerCharacteristics) == 0, -1, "Could not print processor masks and relationships");
+    CHECK(getStringAffinityMasksAndNumaNodesCounts(computerCharacteristics) == 0, -1, "Could not print affinity masks and numa nodes count");
+    CHECK(getStringCpuSetsInformation(computerCharacteristics) == 0, -1, "Could not print CPU sets information");
+
+    HANDLE hFile = CreateFile(filePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, FILE_APPEND_DATA, FILE_ATTRIBUTE_NORMAL, 0);
+    CHECK(hFile != INVALID_HANDLE_VALUE, -1, "Opening the file failed");
+
+    LPCSTR cString = computerCharacteristics.c_str();
+    CHECK(WriteFile(hFile, cString, strlen(cString), NULL, NULL), -1, "Error when writing in file", CLOSE_HANDLES(hFile));
+
+    CLOSE_HANDLES(hFile);
 }
 
 int main() {
@@ -409,7 +422,7 @@ int main() {
     result = SHCreateDirectoryEx(NULL, RESULTS_DYNAMIC_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
-    printComputerCharacteristics();
+    writeComputerCharacteristics(INFO_FILE_PATH);
     applySequentialImageTransform(IMAGE_PATH);
     return 0;
 }

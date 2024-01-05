@@ -39,6 +39,7 @@ using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
 #define FILE_HEADER_SIZE 14
 #define INFO_HEADER_SIZE 40
 
+#define INFO_FILE_PATH "C:\\Facultate\\CSSO\\Week6\\info.txt"
 
 #define RESULTS_SEQ_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\secvential"
 #define RESULTS_STATIC_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\static"
