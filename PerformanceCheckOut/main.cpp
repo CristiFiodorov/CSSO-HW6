@@ -7,12 +7,15 @@
 #include <winnt.h>
 #include <string>
 #include <format>
+#include <cmath>
 
 
 #pragma comment(lib, "Shlwapi.lib")
 #include <shlwapi.h>
 
 #include "utils.h"
+
+DWORD nrCPU = 1;
 
 
 DWORD extractBmpHeaders(HANDLE hImage, PBITMAPFILEHEADER bMapFileHeader, PBITMAPINFOHEADER bMapInfoHeader) {
@@ -252,6 +255,7 @@ DWORD getStringSystemCpuSetsInformation(std::string& output) {
     }
 
     output += std::format("The number of CPU_SET_INFORMATION structures processed: {}\n", index);
+    nrCPU = index;
     free(cpuSetIds);
 }
 
@@ -311,26 +315,93 @@ DWORD applyInvertBytesTransform(LPRGBA_PIXEL pixel) {
     return 0;
 }
 
-DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, LPCSTR operationName, BITMAPFILEHEADER& bMapFileHeader, BITMAPINFOHEADER& bMapInfoHeader,
-    PixelTransformFunction pixelTransform) {
-    LARGE_INTEGER startTime, endTime;
-    QueryPerformanceCounter(&startTime);
+DWORD WINAPI ThreadFunctionStatic(LPVOID lpParam) {
+    ThreadParams* params = (ThreadParams*)lpParam;
+    DWORD64 remainingSize = params->partSize;
+    DWORD64 startOffset = params->startOffset;
 
-    CHECK(SetFilePointer(hImage, bMapFileHeader.bfOffBits, NULL, FILE_BEGIN) != INVALID_SET_FILE_POINTER, -1, "Setting the file pointer failed");
+    BYTE buffer[CHUNK_SIZE + 1];
+    DWORD bytesRead;
 
-    CHAR resultImagePath[MAX_PATH];
-    sprintf_s(resultImagePath, "%s\\%s_%s_temp.bmp", RESULTS_SEQ_FOLDER, imageName, operationName);
+    while (remainingSize > 0) {
+        memset(buffer, 0, sizeof(buffer));
+        DWORD chunkSize = min(CHUNK_SIZE, remainingSize);
 
-    HANDLE hResult = CreateFile(resultImagePath, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    CHECK(hResult != INVALID_HANDLE_VALUE, -1, "Opening the results file failed");
+        CRITICAL_SECTION_OPERATION(params->readCriticalSection,
+            SetFilePointer(params->hImage, startOffset, NULL, FILE_BEGIN);
+            CHECK(ReadFile(params->hImage, buffer, chunkSize, &bytesRead, NULL), -1, "Failed to read from hImage",
+                LeaveCriticalSection(params->readCriticalSection));
+            );
 
-    CHECK(appendBmapHeadersToFile(hResult, bMapFileHeader, bMapInfoHeader) == 0, -1, "Headers could not be appended", CLOSE_HANDLES(hResult));
+        if (bytesRead == 0) {
+            break;
+        }
 
+        for (DWORD i = 0; i < bytesRead; i += 4 * sizeof(BYTE)) {
+            LPRGBA_PIXEL pixel = (LPRGBA_PIXEL)(buffer + i * sizeof(BYTE));
+            params->pixelTransform(pixel);
+        }
+
+        CRITICAL_SECTION_OPERATION(params->writeCriticalSection,
+            SetFilePointer(params->hResult, startOffset, NULL, FILE_BEGIN);
+            CHECK(WriteFile(params->hResult, buffer, bytesRead, NULL, NULL), -1, "Failed to write to result file",
+                LeaveCriticalSection(params->writeCriticalSection));
+            );
+
+        startOffset += bytesRead;
+        remainingSize -= bytesRead;
+    }
+
+    return 0;
+}
+
+DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform) {
+    DWORD threadCount = nrCPU;
+    HANDLE* threads = new HANDLE[threadCount];
+    ThreadParams* threadParams = new ThreadParams[threadCount];
+
+    CRITICAL_SECTION writeCriticalSection;
+    InitializeCriticalSection(&writeCriticalSection);
+
+    CRITICAL_SECTION readCriticalSection;
+    InitializeCriticalSection(&readCriticalSection);
+
+    LARGE_INTEGER fileSizeLI;
+    CHECK(GetFileSizeEx(hImage, &fileSizeLI), -1, "Failed to get file size", delete[] threads, delete[] threadParams);
+
+    DWORD fileSize = (fileSizeLI.QuadPart - 54);
+    DWORD partSize = (DWORD)(std::ceil((fileSize / 4) / (float)threadCount) * 4);
+
+    for (int i = 0; i < threadCount; ++i) {
+        threadParams[i].hImage = hImage;
+        threadParams[i].hResult = hResult;
+        threadParams[i].startOffset = 54 + (i * partSize);
+        threadParams[i].partSize = (i == threadCount - 1) ? (fileSize - (i * partSize)) : partSize;
+        threadParams[i].pixelTransform = pixelTransform;
+        threadParams[i].writeCriticalSection = &writeCriticalSection;
+        threadParams[i].readCriticalSection = &readCriticalSection;
+
+        threads[i] = CreateThread(NULL, 0, ThreadFunctionStatic, &threadParams[i], 0, NULL);
+    }
+
+    WaitForMultipleObjects(threadCount, threads, TRUE, INFINITE);
+
+    for (int i = 0; i < threadCount; ++i) {
+        CLOSE_HANDLES(threads[i]);
+    }
+
+    delete[] threads; 
+    delete[] threadParams;
+    return 0;
+}
+
+
+DWORD fileTransformSequential(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform) {
     while (true) {
-        CHAR buffer[CHUNK_SIZE + 1];
+        BYTE buffer[CHUNK_SIZE + 1];
         DWORD bytesRead;
         memset(buffer, 0, sizeof(buffer));
-        CHECK(ReadFile(hImage, buffer, CHUNK_SIZE, &bytesRead, NULL), -1, "Reading from a file failed", CLOSE_HANDLES(hResult));
+        CHECK(ReadFile(hImage, buffer, CHUNK_SIZE, &bytesRead, NULL), -1, "Reading from a file failed");
         if (!bytesRead) {
             break;
         }
@@ -338,8 +409,31 @@ DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, LPCSTR operation
             LPRGBA_PIXEL pixel = (LPRGBA_PIXEL)(buffer + i * sizeof(BYTE));
             pixelTransform(pixel);
         }
-        CHECK(WriteFile(hResult, buffer, bytesRead, NULL, NULL), -1, "Error when writing into file", CLOSE_HANDLES(hResult));
+        CHECK(WriteFile(hResult, buffer, bytesRead, NULL, NULL), -1, "Error when writing into file");
     }
+
+    return 0;
+}
+
+
+DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, BITMAPFILEHEADER& bMapFileHeader, BITMAPINFOHEADER& bMapInfoHeader,
+    FileTransformFunction fileTransform, PixelTransformFunction pixelTransform, LPCSTR resultFolder, LPCSTR operationName) {
+    LARGE_INTEGER startTime, endTime;
+    QueryPerformanceCounter(&startTime);
+
+    CHECK(SetFilePointer(hImage, bMapFileHeader.bfOffBits, NULL, FILE_BEGIN) != INVALID_SET_FILE_POINTER, -1, "Setting the file pointer failed");
+
+    CHAR resultImagePath[MAX_PATH];
+    sprintf_s(resultImagePath, "%s\\%s_%s_temp.bmp", resultFolder, imageName, operationName);
+
+    HANDLE hResult = CreateFile(resultImagePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    CHECK(hResult != INVALID_HANDLE_VALUE, -1, "Opening the results file failed");
+
+    CHECK(appendBmapHeadersToFile(hResult, bMapFileHeader, bMapInfoHeader) == 0, -1, "Headers could not be appended", 
+        CLOSE_HANDLES(hResult));
+
+    CHECK(fileTransform(hImage, hResult, pixelTransform) == 0, -1, "Transformation failed",
+        CLOSE_HANDLES(hResult));
 
     CLOSE_HANDLES(hResult);
 
@@ -352,14 +446,14 @@ DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, LPCSTR operation
     CHAR oldImagePath[MAX_PATH];
     memcpy(oldImagePath, resultImagePath, MAX_PATH);
 
-    sprintf_s(resultImagePath, "%s\\%s_%s_%d.bmp", RESULTS_SEQ_FOLDER, imageName, operationName, elapsedMilliseconds);
+    sprintf_s(resultImagePath, "%s\\%s_%s_%d.bmp", resultFolder, imageName, operationName, elapsedMilliseconds);
     CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
     setFileReadPermissionOnly(resultImagePath);
 
     return 0;
 }
 
-DWORD applySequentialImageTransform(LPCSTR imagePath) {
+DWORD applyImageTransformations(LPCSTR imagePath) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -384,11 +478,21 @@ DWORD applySequentialImageTransform(LPCSTR imagePath) {
     LPSTR imageName = PathFindFileName(imagePathCopy);
     CHECK(imageName != imagePath, -1, "Could not extract the image name");
     PathRemoveExtension(imageName);
-    CHECK(applyImageTransformation(hImage, imageName, SZ_GRAYSCALE_OPERATION, bMapFileHeader, bMapInfoHeader, applyPixelGrayscaleTransform) == 0, -1, "Grayscale Transformation Failed",
-        CLOSE_HANDLES(hImage));
 
-    CHECK(applyImageTransformation(hImage, imageName, SZ_INVERT_BYTE_OPERATION, bMapFileHeader, bMapInfoHeader, applyInvertBytesTransform) == 0, -1, "Grayscale Transformation Failed",
-        CLOSE_HANDLES(hImage));
+    // Sequential
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyPixelGrayscaleTransform, RESULTS_SEQ_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
+        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyInvertBytesTransform, RESULTS_SEQ_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
+        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+
+    // Parallel static
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyPixelGrayscaleTransform, RESULTS_STATIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
+        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyInvertBytesTransform, RESULTS_STATIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
+        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
     CLOSE_HANDLES(hImage);
     return 0;
 }
@@ -423,6 +527,6 @@ int main() {
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     writeComputerCharacteristics(INFO_FILE_PATH);
-    applySequentialImageTransform(IMAGE_PATH);
+    applyImageTransformations(IMAGE_PATH);
     return 0;
 }

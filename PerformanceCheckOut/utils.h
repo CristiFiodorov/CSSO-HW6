@@ -20,6 +20,15 @@
         }                                                                           \
 }
 
+
+#define CRITICAL_SECTION_OPERATION(criticalSection, ...){   \
+    EnterCriticalSection(criticalSection);                  \
+    __VA_ARGS__;                                            \
+    LeaveCriticalSection(criticalSection);                  \
+}
+
+
+
 typedef BOOL(WINAPI* LPFN_GLPI)(
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION,
     PDWORD);
@@ -33,6 +42,18 @@ typedef struct RgbaPixel {
 } RGBA_PIXEL, *LPRGBA_PIXEL;
 
 using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
+using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction);
+
+typedef struct ThreadParams {
+    HANDLE hImage;
+    HANDLE hResult;
+    DWORD64 startOffset;
+    DWORD64 partSize;
+    PixelTransformFunction pixelTransform;
+    CRITICAL_SECTION* writeCriticalSection;
+    CRITICAL_SECTION* readCriticalSection;
+} THREAD_PARAMS, *LPTHREAD_PARAMS;
+
 
 #define IMAGE_PATH "C:\\Facultate\\CSSO\\Week6\\date\\forest.bmp"
 #define CHUNK_SIZE 0x4000
