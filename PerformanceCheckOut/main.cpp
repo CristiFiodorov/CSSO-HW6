@@ -257,11 +257,15 @@ DWORD getStringSystemCpuSetsInformation(std::string& output) {
     output += std::format("The number of CPU_SET_INFORMATION structures processed: {}\n", index);
     nrCPU = index;
     free(cpuSetIds);
+
+    return 0;
 }
 
 DWORD getStringCpuSetsInformation(std::string& output) {
     CHECK(getStringProcessDefaultCpuSetsInformation(output) == 0, -1, "Failed to print process default cpu sets information");
     CHECK(getStringSystemCpuSetsInformation(output) == 0, -1, "Failed to print system cpu sets information");
+
+    return 0;
 }
 
 DWORD setFileReadPermissionOnly(LPSTR filename) {
@@ -315,8 +319,9 @@ DWORD applyInvertBytesTransform(LPRGBA_PIXEL pixel) {
     return 0;
 }
 
+
 DWORD WINAPI ThreadFunctionStatic(LPVOID lpParam) {
-    ThreadParams* params = (ThreadParams*)lpParam;
+    LPSTATIC_THREAD_PARAMS params = (LPSTATIC_THREAD_PARAMS)lpParam;
     DWORD64 remainingSize = params->partSize;
     DWORD64 startOffset = params->startOffset;
 
@@ -355,10 +360,123 @@ DWORD WINAPI ThreadFunctionStatic(LPVOID lpParam) {
     return 0;
 }
 
-DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform) {
+DWORD WINAPI ThreadFunctionDynamic(LPVOID lpParam) {
+    LPDYNAMIC_THREAD_PARAMS params = (LPDYNAMIC_THREAD_PARAMS)lpParam;
+    LPDYNAMIC_THREAD_REQUEST threadRequest = params->threadRequest;
+
+    STATIC_THREAD_PARAMS staticThreadParams = {
+        .hImage = params->hImage,
+        .hResult = params->hResult,
+        .pixelTransform = params->pixelTransform,
+        .writeCriticalSection = params->writeCriticalSection,
+        .readCriticalSection = params->readCriticalSection
+    };
+    
+
+    while(true) {
+        if(threadRequest->requestStatus == FINISHED) {
+            break;
+        }
+        if(threadRequest->requestStatus == PENDING) {
+            continue;
+        }
+        CRITICAL_SECTION_OPERATION(params->mapCriticalSection, 
+            if(threadRequest->requestStatus != READY) {
+                LeaveCriticalSection(params->mapCriticalSection);
+                continue;
+            }
+            staticThreadParams.partSize = params->threadRequest->partSize;
+            staticThreadParams.startOffset = params->threadRequest->startOffset;
+            threadRequest->requestStatus = PENDING;
+        );
+        ThreadFunctionStatic((LPVOID)&staticThreadParams);
+    }
+
+    return 0;
+}
+
+DWORD fileTransformParallelDynamic(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform, DWORD bfOffBits) {
     DWORD threadCount = nrCPU;
     HANDLE* threads = new HANDLE[threadCount];
-    ThreadParams* threadParams = new ThreadParams[threadCount];
+    LPDYNAMIC_THREAD_PARAMS threadParams = new DYNAMIC_THREAD_PARAMS[threadCount];
+
+    CRITICAL_SECTION writeCriticalSection;
+    InitializeCriticalSection(&writeCriticalSection);
+
+    CRITICAL_SECTION readCriticalSection;
+    InitializeCriticalSection(&readCriticalSection);
+
+    CRITICAL_SECTION mapCriticalSection;
+    InitializeCriticalSection(&mapCriticalSection);
+
+
+    DYNAMIC_THREAD_REQUEST threadRequest;
+    threadRequest.startOffset = bfOffBits;
+    threadRequest.requestStatus = READY;
+
+    LARGE_INTEGER fileSizeLI;
+    CHECK(GetFileSizeEx(hImage, &fileSizeLI), -1, "Failed to get file size", delete[] threads, delete[] threadParams, 
+        DeleteCriticalSection(&writeCriticalSection), DeleteCriticalSection(&readCriticalSection), DeleteCriticalSection(&mapCriticalSection));
+
+    DWORD64 remainingBytes = (fileSizeLI.QuadPart - bfOffBits);
+    threadRequest.partSize = ((remainingBytes / 4) / (2 * threadCount)) * 4;
+
+    DWORD64 nextOffset = threadRequest.startOffset + threadRequest.partSize;
+    remainingBytes -= threadRequest.partSize;
+
+    for (int i = 0; i < threadCount; ++i) {
+        threadParams[i].hImage = hImage;
+        threadParams[i].hResult = hResult;
+        threadParams[i].pixelTransform = pixelTransform;
+        threadParams[i].writeCriticalSection = &writeCriticalSection;
+        threadParams[i].readCriticalSection = &readCriticalSection;
+        threadParams[i].mapCriticalSection = &mapCriticalSection;
+        threadParams[i].threadRequest = &threadRequest;
+        threads[i] = CreateThread(NULL, 0, ThreadFunctionDynamic, &threadParams[i], 0, NULL);
+    }
+
+    while(true) {
+        if(threadRequest.requestStatus == READY) {
+            continue;
+        }
+        CRITICAL_SECTION_OPERATION(&mapCriticalSection, 
+            if (remainingBytes <= 0) {
+                threadRequest.requestStatus = FINISHED;
+                LeaveCriticalSection(&mapCriticalSection);
+                break;
+            }
+            threadRequest.startOffset = nextOffset;
+            threadRequest.partSize = ((remainingBytes / 4) / (2 * threadCount)) * 4;
+            if(threadRequest.partSize == 0) {
+                threadRequest.partSize = remainingBytes;
+            }
+
+            threadRequest.requestStatus = READY;
+            nextOffset = threadRequest.startOffset + threadRequest.partSize;
+            remainingBytes -= threadRequest.partSize;
+        );
+    }
+
+    WaitForMultipleObjects(threadCount, threads, TRUE, INFINITE);
+
+    for (int i = 0; i < threadCount; ++i) {
+        CLOSE_HANDLES(threads[i]);
+    }   
+
+
+    DeleteCriticalSection(&writeCriticalSection);
+    DeleteCriticalSection(&readCriticalSection);
+    DeleteCriticalSection(&mapCriticalSection);
+
+    delete[] threads;
+    delete[] threadParams;
+    return 0;
+}
+
+DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform, DWORD bfOffBits) {
+    DWORD threadCount = nrCPU;
+    HANDLE* threads = new HANDLE[threadCount];
+    LPSTATIC_THREAD_PARAMS threadParams = new STATIC_THREAD_PARAMS[threadCount];
 
     CRITICAL_SECTION writeCriticalSection;
     InitializeCriticalSection(&writeCriticalSection);
@@ -367,15 +485,16 @@ DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformF
     InitializeCriticalSection(&readCriticalSection);
 
     LARGE_INTEGER fileSizeLI;
-    CHECK(GetFileSizeEx(hImage, &fileSizeLI), -1, "Failed to get file size", delete[] threads, delete[] threadParams);
+    CHECK(GetFileSizeEx(hImage, &fileSizeLI), -1, "Failed to get file size", delete[] threads, delete[] threadParams, 
+        DeleteCriticalSection(&writeCriticalSection), DeleteCriticalSection(&readCriticalSection));
 
-    DWORD fileSize = (fileSizeLI.QuadPart - 54);
-    DWORD partSize = (DWORD)(std::ceil((fileSize / 4) / (float)threadCount) * 4);
+    DWORD64 fileSize = (fileSizeLI.QuadPart - bfOffBits);
+    DWORD64 partSize = (DWORD)(std::ceil((fileSize / 4) / (float)threadCount) * 4);
 
-    for (int i = 0; i < threadCount; ++i) {
+    for (DWORD i = 0; i < threadCount; ++i) {
         threadParams[i].hImage = hImage;
         threadParams[i].hResult = hResult;
-        threadParams[i].startOffset = 54 + (i * partSize);
+        threadParams[i].startOffset = bfOffBits + (i * partSize);
         threadParams[i].partSize = (i == threadCount - 1) ? (fileSize - (i * partSize)) : partSize;
         threadParams[i].pixelTransform = pixelTransform;
         threadParams[i].writeCriticalSection = &writeCriticalSection;
@@ -386,9 +505,12 @@ DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformF
 
     WaitForMultipleObjects(threadCount, threads, TRUE, INFINITE);
 
-    for (int i = 0; i < threadCount; ++i) {
+    for (DWORD i = 0; i < threadCount; ++i) {
         CLOSE_HANDLES(threads[i]);
     }
+
+    DeleteCriticalSection(&writeCriticalSection);
+    DeleteCriticalSection(&readCriticalSection);
 
     delete[] threads; 
     delete[] threadParams;
@@ -396,7 +518,7 @@ DWORD fileTransformParallelStatic(HANDLE hImage, HANDLE hResult, PixelTransformF
 }
 
 
-DWORD fileTransformSequential(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform) {
+DWORD fileTransformSequential(HANDLE hImage, HANDLE hResult, PixelTransformFunction pixelTransform, DWORD bfOffBits) {
     while (true) {
         BYTE buffer[CHUNK_SIZE + 1];
         DWORD bytesRead;
@@ -432,7 +554,7 @@ DWORD applyImageTransformation(HANDLE hImage, LPCSTR imageName, BITMAPFILEHEADER
     CHECK(appendBmapHeadersToFile(hResult, bMapFileHeader, bMapInfoHeader) == 0, -1, "Headers could not be appended", 
         CLOSE_HANDLES(hResult));
 
-    CHECK(fileTransform(hImage, hResult, pixelTransform) == 0, -1, "Transformation failed",
+    CHECK(fileTransform(hImage, hResult, pixelTransform, bMapFileHeader.bfOffBits) == 0, -1, "Transformation failed",
         CLOSE_HANDLES(hResult));
 
     CLOSE_HANDLES(hResult);
@@ -479,20 +601,28 @@ DWORD applyImageTransformations(LPCSTR imagePath) {
     CHECK(imageName != imagePath, -1, "Could not extract the image name");
     PathRemoveExtension(imageName);
 
-    // Sequential
-    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyPixelGrayscaleTransform, RESULTS_SEQ_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
+    //// Sequential
+    //CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyPixelGrayscaleTransform, RESULTS_SEQ_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
+    //    -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+    //CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyInvertBytesTransform, RESULTS_SEQ_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
+    //    -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+
+    //// Parallel static
+    //CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyPixelGrayscaleTransform, RESULTS_STATIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
+    //    -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+    //CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyInvertBytesTransform, RESULTS_STATIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
+    //    -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+    // Parallel dynamic
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyPixelGrayscaleTransform, RESULTS_DYNAMIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
         -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
 
-    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyInvertBytesTransform, RESULTS_SEQ_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
+    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyInvertBytesTransform, RESULTS_DYNAMIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
         -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-
-    // Parallel static
-    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyPixelGrayscaleTransform, RESULTS_STATIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-    CHECK(applyImageTransformation(hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyInvertBytesTransform, RESULTS_STATIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+        
     CLOSE_HANDLES(hImage);
     return 0;
 }
@@ -514,6 +644,8 @@ DWORD writeComputerCharacteristics(LPCSTR filePath) {
     CHECK(WriteFile(hFile, cString, strlen(cString), NULL, NULL), -1, "Error when writing in file", CLOSE_HANDLES(hFile));
 
     CLOSE_HANDLES(hFile);
+
+    return 0;
 }
 
 int main() {

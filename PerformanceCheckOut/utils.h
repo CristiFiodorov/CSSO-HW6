@@ -42,17 +42,41 @@ typedef struct RgbaPixel {
 } RGBA_PIXEL, *LPRGBA_PIXEL;
 
 using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
-using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction);
+using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD);
 
-typedef struct ThreadParams {
+enum RequestStatus {
+    PENDING, 
+    READY, 
+    FINISHED
+};
+
+typedef struct DynamicThreadRequest {
+    DWORD64 startOffset;
+    DWORD64 partSize;
+    RequestStatus requestStatus;
+} DYNAMIC_THREAD_REQUEST, *LPDYNAMIC_THREAD_REQUEST;
+
+typedef struct StaticThreadParams {
     HANDLE hImage;
     HANDLE hResult;
     DWORD64 startOffset;
     DWORD64 partSize;
     PixelTransformFunction pixelTransform;
-    CRITICAL_SECTION* writeCriticalSection;
-    CRITICAL_SECTION* readCriticalSection;
-} THREAD_PARAMS, *LPTHREAD_PARAMS;
+    LPCRITICAL_SECTION writeCriticalSection;
+    LPCRITICAL_SECTION readCriticalSection;
+} STATIC_THREAD_PARAMS, *LPSTATIC_THREAD_PARAMS;
+
+
+typedef struct DynamicThreadParams {
+    HANDLE hImage;
+    HANDLE hResult;
+    PixelTransformFunction pixelTransform;
+    LPCRITICAL_SECTION writeCriticalSection;
+    LPCRITICAL_SECTION readCriticalSection;
+    LPCRITICAL_SECTION mapCriticalSection;
+    LPDYNAMIC_THREAD_REQUEST threadRequest;
+} DYNAMIC_THREAD_PARAMS, * LPDYNAMIC_THREAD_PARAMS;
+
 
 
 #define IMAGE_PATH "C:\\Facultate\\CSSO\\Week6\\date\\forest.bmp"
@@ -74,3 +98,4 @@ typedef struct ThreadParams {
 
 #define SZ_GRAYSCALE_OPERATION "grayscale"
 #define SZ_INVERT_BYTE_OPERATION "invert_bytes"
+#define WORKER_MAPPING "worker_mapping"
