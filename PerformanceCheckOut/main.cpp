@@ -64,14 +64,14 @@ int main() {
     HRESULT result = SHCreateDirectoryEx(NULL, RESULTS_SEQ_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
-    std::string cpuInfo;
-    getStringSystemCpuSetsInformation(cpuInfo, &nrCPU);
-
     result = SHCreateDirectoryEx(NULL, RESULTS_STATIC_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     result = SHCreateDirectoryEx(NULL, RESULTS_DYNAMIC_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
+
+    std::string cpuInfo;
+    getStringSystemCpuSetsInformation(cpuInfo, &nrCPU);
 
     writeComputerCharacteristics(INFO_FILE_PATH);
     applyImageTransformations(IMAGE_PATH);
