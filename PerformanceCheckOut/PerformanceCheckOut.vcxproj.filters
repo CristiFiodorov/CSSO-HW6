@@ -13,15 +13,63 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\Methods">
+      <UniqueIdentifier>{4b9124fb-591c-489a-a725-7c2afa393de3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Methods">
+      <UniqueIdentifier>{3164ee1d-8dfb-4ec8-8f44-0af007874483}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Utils">
+      <UniqueIdentifier>{4b34fe3e-b2fc-4b05-a6ab-133ac3b45cc5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utils">
+      <UniqueIdentifier>{ac3ff0f5-ff3f-41c9-9101-aeae4e4b8286}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="dynamic.cpp">
+      <Filter>Source Files\Methods</Filter>
+    </ClCompile>
+    <ClCompile Include="sequential.cpp">
+      <Filter>Source Files\Methods</Filter>
+    </ClCompile>
+    <ClCompile Include="static.cpp">
+      <Filter>Source Files\Methods</Filter>
+    </ClCompile>
+    <ClCompile Include="characteristics_utils.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="image_utils.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="security_utils.cpp">
+      <Filter>Source Files\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils.h">
+    <ClInclude Include="constants.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="static.h">
+      <Filter>Header Files\Methods</Filter>
+    </ClInclude>
+    <ClInclude Include="dynamic.h">
+      <Filter>Header Files\Methods</Filter>
+    </ClInclude>
+    <ClInclude Include="sequential.h">
+      <Filter>Header Files\Methods</Filter>
+    </ClInclude>
+    <ClInclude Include="characteristics_utils.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="image_utils.h">
+      <Filter>Header Files\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="security_utils.h">
+      <Filter>Header Files\Utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

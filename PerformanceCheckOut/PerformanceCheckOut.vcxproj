@@ -128,10 +128,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="characteristics_utils.cpp" />
+    <ClCompile Include="dynamic.cpp" />
+    <ClCompile Include="image_utils.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="security_utils.cpp" />
+    <ClCompile Include="sequential.cpp" />
+    <ClCompile Include="static.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="utils.h" />
+    <ClInclude Include="characteristics_utils.h" />
+    <ClInclude Include="constants.h" />
+    <ClInclude Include="dynamic.h" />
+    <ClInclude Include="image_utils.h" />
+    <ClInclude Include="security_utils.h" />
+    <ClInclude Include="sequential.h" />
+    <ClInclude Include="static.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

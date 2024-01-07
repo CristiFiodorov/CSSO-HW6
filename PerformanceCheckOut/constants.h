@@ -1,5 +1,18 @@
 #pragma once
+#include <windows.h>
+#include <string.h>
 #include <stdio.h>
+#include <Shlobj.h>
+#include <Aclapi.h>
+#include <sddl.h>
+#include <winnt.h>
+#include <string>
+#include <format>
+#include <cmath>
+
+
+#pragma comment(lib, "Shlwapi.lib")
+#include <shlwapi.h>
 
 #define CHECK(condition, ret, errorText, ...){												    \
 	if (!(condition)){																		    \
@@ -27,8 +40,6 @@
     LeaveCriticalSection(criticalSection);                  \
 }
 
-
-
 typedef BOOL(WINAPI* LPFN_GLPI)(
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION,
     PDWORD);
@@ -42,7 +53,7 @@ typedef struct RgbaPixel {
 } RGBA_PIXEL, *LPRGBA_PIXEL;
 
 using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
-using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD);
+using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD, DWORD);
 
 enum RequestStatus {
     PENDING, 
