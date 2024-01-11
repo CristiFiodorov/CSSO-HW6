@@ -1,6 +1,10 @@
 #pragma once
 #include "constants.h"
 #include "security_utils.h"
+#include "characteristics_utils.h"
+#include "static.h"
+#include "dynamic.h"
+#include "sequential.h"
 
 DWORD extractBmpHeaders(HANDLE hImage, PBITMAPFILEHEADER bMapFileHeader, PBITMAPINFOHEADER bMapInfoHeader);
 
@@ -15,3 +19,5 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     FileTransformFunction fileTransform, PixelTransformFunction pixelTransform,
     LPCSTR resultFolder, LPCSTR operationName);
 
+
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD nrCpu);

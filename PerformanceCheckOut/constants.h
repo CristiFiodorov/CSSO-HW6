@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <windowsx.h>
 #include <string.h>
 #include <stdio.h>
 #include <Shlobj.h>
@@ -22,6 +23,14 @@
 	}																						    \
 }
 
+#define CHECK_GUI(condition, ret, errorText, ...) { \
+    if (!(condition)){								\
+		MessageBox(NULL, errorText, "Error", NULL); \
+        __VA_ARGS__;								\
+        return (ret);							    \
+	}											    \
+}
+
 #define CLOSE_HANDLES(...){                                                         \
         HANDLE handles[] = { __VA_ARGS__ };                                         \
         int count = sizeof(handles) / sizeof(handles[0]);                           \
@@ -32,7 +41,6 @@
             }                                                                       \
         }                                                                           \
 }
-
 
 #define CRITICAL_SECTION_OPERATION(criticalSection, ...){   \
     EnterCriticalSection(criticalSection);                  \

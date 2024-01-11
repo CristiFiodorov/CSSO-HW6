@@ -1,66 +1,63 @@
 #include "constants.h"
-#include "static.h"
-#include "dynamic.h"
-#include "sequential.h"
 #include "image_utils.h"
 #include "characteristics_utils.h"
 
+static LPCSTR szWindowClass = "RequestClientApp";
+static LPCSTR szTitle = "RequestClientApp";
+
+static const int WINDOW_HEIGHT = 800;
+static const int WINDOW_WIDTH = 1200;
+
+static const int PC_INFO_WIDTH = WINDOW_WIDTH / 3;
+static const int PC_INFO_HEIGHT = 35;
+
 DWORD nrCPU = 1;
-
-DWORD applyImageTransformations(LPCSTR imagePath) {
-    HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
-        NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
-    CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
-
-    BITMAPFILEHEADER bMapFileHeader;
-    BITMAPINFOHEADER bMapInfoHeader;
-
-    extractBmpHeaders(hImage, &bMapFileHeader, &bMapInfoHeader);
-
-    CHECK((CHAR)bMapFileHeader.bfType == 'B' && (CHAR)(bMapFileHeader.bfType >> 8) == 'M', -1, "The image type is not bitmap");
-    CHECK(bMapInfoHeader.biBitCount == 32, -1, "The application supports only a count of 4 bytes per pixel");
-    CHECK(bMapInfoHeader.biCompression == 0, -1, "The application supports only compression method None");
-    CHECK(bMapFileHeader.bfOffBits < GetFileSize(hImage, NULL), -1, "The offset where the image data begins is invalid");
-
-    printFileHeaderData(bMapFileHeader);
-    printInfoHeaderData(bMapInfoHeader);
-
-    CHAR imagePathCopy[MAX_PATH];
-    memset(imagePathCopy, 0, sizeof(imagePathCopy));
-    memcpy(imagePathCopy, imagePath, strlen(imagePath));
-
-    LPSTR imageName = PathFindFileName(imagePathCopy);
-    CHECK(imageName != imagePath, -1, "Could not extract the image name");
-    PathRemoveExtension(imageName);
-
-    // Sequential
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyPixelGrayscaleTransform, RESULTS_SEQ_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyInvertBytesTransform, RESULTS_SEQ_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+HINSTANCE hInst;
+HWND submitButton, baseUrlInput, universityIdInput, hEdit;
 
 
-    //// Parallel static
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyPixelGrayscaleTransform, RESULTS_STATIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+    case WM_CREATE:
+        CreateWindow("Static", "Personal Computer Information", WS_VISIBLE | WS_CHILD | SS_CENTER,
+            0, 0, PC_INFO_WIDTH, PC_INFO_HEIGHT, hWnd, NULL, NULL, NULL);
 
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyInvertBytesTransform, RESULTS_STATIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+            0, PC_INFO_HEIGHT, PC_INFO_WIDTH, 2, hWnd, NULL, NULL, NULL);
 
-    // Parallel dynamic
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyPixelGrayscaleTransform, RESULTS_DYNAMIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
+            PC_INFO_WIDTH, 0, 2, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
 
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyInvertBytesTransform, RESULTS_DYNAMIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-        
-    CLOSE_HANDLES(hImage);
+        break;
+    case WM_COMMAND:
+        switch (LOWORD(wParam))
+        {
+        case 1:
+            DWORD exitCode;
+            SetWindowText(hEdit, "The output will be displayed here..");
+        }
+        break;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProc(hWnd, message, wParam, lParam);
+        break;
+    }
+
     return 0;
 }
 
+int WINAPI WinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPSTR     lpCmdLine,
+    _In_ int       nCmdShow
+)
+{
 
-int main() {
     HRESULT result = SHCreateDirectoryEx(NULL, RESULTS_SEQ_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
@@ -73,7 +70,72 @@ int main() {
     result = SHCreateDirectoryEx(NULL, RESULTS_DYNAMIC_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
-    writeComputerCharacteristics(INFO_FILE_PATH);
-    applyImageTransformations(IMAGE_PATH);
-    return 0;
+    WNDCLASSEX wcex;
+
+    wcex.cbSize = sizeof(WNDCLASSEX);
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndProc;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+    wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.lpszMenuName = NULL;
+    wcex.lpszClassName = szWindowClass;
+    wcex.hIconSm = LoadIcon(wcex.hInstance, IDI_APPLICATION);
+
+    if (!RegisterClassEx(&wcex))
+    {
+        MessageBox(NULL,
+            "Call to RegisterClassEx failed!",
+            "Windows Desktop Guided Tour",
+            NULL);
+
+        return 1;
+    }
+
+    hInst = hInstance;
+
+    HWND hWnd = CreateWindowEx(
+        WS_EX_OVERLAPPEDWINDOW,
+        szWindowClass,
+        szTitle,
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        WINDOW_WIDTH, WINDOW_HEIGHT,
+        NULL,
+        NULL,
+        hInstance,
+        NULL
+    );
+
+    if (!hWnd)
+    {
+        MessageBox(NULL,
+            "Call to CreateWindow failed!",
+            "Windows Desktop Guided Tour",
+            NULL);
+
+        return 1;
+    }
+
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
+
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    return (int)msg.wParam;
 }
+
+
+//int main() {
+//    writeComputerCharacteristics(INFO_FILE_PATH);
+//    applyImageTransformations(IMAGE_PATH);
+//    return 0;
+//}
