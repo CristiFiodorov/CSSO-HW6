@@ -114,6 +114,7 @@ typedef struct DynamicThreadParams {
 #define GRAYSCALE_BLUE_COEFF 0.114
 
 #define INVERT_BYTE_CONSTANT 0xFF
+#define MAX_PATH_LEN 260 
 
 #define SZ_GRAYSCALE_OPERATION "grayscale"
 #define SZ_INVERT_BYTE_OPERATION "invert_bytes"

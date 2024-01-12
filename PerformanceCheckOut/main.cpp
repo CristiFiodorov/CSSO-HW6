@@ -5,16 +5,23 @@
 static LPCSTR szWindowClass = "RequestClientApp";
 static LPCSTR szTitle = "RequestClientApp";
 
-static const int WINDOW_HEIGHT = 800;
-static const int WINDOW_WIDTH = 1200;
+const int WINDOW_HEIGHT = 800;
+const int WINDOW_WIDTH = 1200;
 
-static const int PC_INFO_WIDTH = WINDOW_WIDTH / 3;
-static const int PC_INFO_HEIGHT = 35;
+const int THIRD_WIDTH_PART = WINDOW_WIDTH / 3 - 20;
+
+const int VERTICAL_LINE_WIDTH = 5;
+const int CHECKBOX_COMPONENT_HEIGHT = 120;
+
+const int RESULT_AREA_HEIGHT = WINDOW_HEIGHT / 3 - 75;
+
+const int HEADER_HEIGHT = 35;
+const int OUTPUT_COMPONENT_HEIGHT = 2 * HEADER_HEIGHT + 5;
 
 DWORD nrCPU = 1;
 HINSTANCE hInst;
-HWND submitButton, baseUrlInput, universityIdInput, hEdit;
-
+HWND openFileButton, filePathLabel, filePathInput, sequentialBox, dynamicBox, staticBox, testingMethodLabel, startButton, grayscaleLabel, grayscaleOutput, invertLabel, invertOutput, bitmapFileHeaderLabel, bitmapFileHeaderTextArea,
+dibHeaderLabel, dibHeaderTextArea, testsPerformanceLabel, testsPerformanceTextArea, pcInfoTextArea;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -22,21 +29,129 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
         CreateWindow("Static", "Personal Computer Information", WS_VISIBLE | WS_CHILD | SS_CENTER,
-            0, 0, PC_INFO_WIDTH, PC_INFO_HEIGHT, hWnd, NULL, NULL, NULL);
+            0, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
         CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
-            0, PC_INFO_HEIGHT, PC_INFO_WIDTH, 2, hWnd, NULL, NULL, NULL);
+            0, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
 
         CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
-            PC_INFO_WIDTH, 0, 2, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
+            THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        pcInfoTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+            0, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, WINDOW_HEIGHT - 80, hWnd, NULL, NULL, NULL);
+        
+        openFileButton = CreateWindow("Button", "Select BMP Image", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)2, NULL, NULL);
+
+        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
+            THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        filePathLabel = CreateWindow("Static", "Selected File Path:", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        filePathInput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 2 * HEADER_HEIGHT + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+            THIRD_WIDTH_PART, 3 * HEADER_HEIGHT + 15,
+            THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 10, hWnd, NULL, NULL, NULL);
+
+        testingMethodLabel = CreateWindow("Static", "Please select the testing method:", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 3 * HEADER_HEIGHT + 25,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        sequentialBox = CreateWindow("Button", "Sequential", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
+            4 * HEADER_HEIGHT + 30,
+            THIRD_WIDTH_PART, 
+            HEADER_HEIGHT, hWnd, (HMENU)3, NULL, NULL);
+
+        staticBox = CreateWindow("Button", "Parallel Static", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
+            4 * HEADER_HEIGHT + 60,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)4, NULL, NULL);
+
+        dynamicBox = CreateWindow("Button", "Parallel Dynamic", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
+            4 * HEADER_HEIGHT + 90,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)5, NULL, NULL);
+
+        startButton = CreateWindow("Button", "Start Transformation", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+            4 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 15,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)6, NULL, NULL);
+
+        grayscaleLabel = CreateWindow("Static", "Grayscale Operation Output", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+            5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 30,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+            6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 45,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        invertLabel = CreateWindow("Static", "Invert Bytes Operation Output", WS_VISIBLE | WS_CHILD,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+            5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 60,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+            6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 75,
+            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        bitmapFileHeaderLabel = CreateWindow("Static", "Bitmap File Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
+
+        bitmapFileHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, RESULT_AREA_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        dibHeaderLabel = CreateWindow("Static", "Dib Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, HEADER_HEIGHT + RESULT_AREA_HEIGHT + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        dibHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, HEADER_HEIGHT + RESULT_AREA_HEIGHT + 15 + HEADER_HEIGHT, THIRD_WIDTH_PART, RESULT_AREA_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        testsPerformanceLabel = CreateWindow("Static", "Tests Performance", WS_VISIBLE | WS_CHILD | SS_CENTER,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, 2 * (HEADER_HEIGHT + RESULT_AREA_HEIGHT) + 25, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+        testsPerformanceTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, 2 * (HEADER_HEIGHT + RESULT_AREA_HEIGHT) + 30 + HEADER_HEIGHT, THIRD_WIDTH_PART, RESULT_AREA_HEIGHT, hWnd, NULL, NULL, NULL);
 
         break;
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
-        case 1:
-            DWORD exitCode;
-            SetWindowText(hEdit, "The output will be displayed here..");
+        case 2:
+            OPENFILENAME ofn;
+            memset(&ofn, 0, sizeof(ofn));
+
+            CHAR szFile[MAX_PATH_LEN];
+            memset(szFile, 0, sizeof(szFile));
+
+            ofn.lStructSize = sizeof(ofn);
+            ofn.hwndOwner = hWnd;
+            ofn.lpstrFile = szFile;
+            ofn.nMaxFile = sizeof(szFile);
+            ofn.lpstrFilter = "BMP Files (*.bmp)\0*.bmp\0All Files (*.*)\0*.*\0";
+            ofn.nFilterIndex = 1;
+
+            CHECK_GUI(GetOpenFileName(&ofn), -1, "Failure when selecting a .bmp image");
+            SetWindowText(filePathInput, szFile);
+        
+        case 3: 
+            SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
+            break;
+        case 4: 
+            SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);
+            break;
+        case 5: 
+            SendMessage(dynamicBox, BM_SETCHECK, !SendMessage(dynamicBox, BM_GETCHECK, 0, 0), 0);
+            break;
         }
         break;
     case WM_DESTROY:
