@@ -1,4 +1,5 @@
 #include "image_utils.h"
+#include <set>
 
 DWORD extractBmpHeaders(HANDLE hImage, PBITMAPFILEHEADER bMapFileHeader, PBITMAPINFOHEADER bMapInfoHeader) {
     CHECK(ReadFile(hImage, bMapFileHeader, FILE_HEADER_SIZE, NULL, NULL), -1, "Reading the file header failed");
@@ -72,7 +73,7 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     return 0;
 }
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD nrCPU) {
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -87,8 +88,8 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD nrCPU) {
     CHECK(bMapInfoHeader.biCompression == 0, -1, "The application supports only compression method None");
     CHECK(bMapFileHeader.bfOffBits < GetFileSize(hImage, NULL), -1, "The offset where the image data begins is invalid");
 
-    printFileHeaderData(bMapFileHeader);
-    printInfoHeaderData(bMapInfoHeader);
+    getStringFileHeaderData(bMapFileHeader, stringFileHeaderData);
+    getStringInfoHeaderData(bMapInfoHeader, stringInfoHeaderData);
 
     CHAR imagePathCopy[MAX_PATH];
     memset(imagePathCopy, 0, sizeof(imagePathCopy));
@@ -98,27 +99,14 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD nrCPU) {
     CHECK(imageName != imagePath, -1, "Could not extract the image name");
     PathRemoveExtension(imageName);
 
-    // Sequential
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyPixelGrayscaleTransform, RESULTS_SEQ_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
 
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformSequential, applyInvertBytesTransform, RESULTS_SEQ_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+    for (auto& transformationUtil : transformationUtils) {
+        CHECK(applyImageTransformation(totalNrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION) == 0,
+            -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
 
-
-    //// Parallel static
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyPixelGrayscaleTransform, RESULTS_STATIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelStatic, applyInvertBytesTransform, RESULTS_STATIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-    // Parallel dynamic
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyPixelGrayscaleTransform, RESULTS_DYNAMIC_FOLDER, SZ_GRAYSCALE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-
-    CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, fileTransformParallelDynamic, applyInvertBytesTransform, RESULTS_DYNAMIC_FOLDER, SZ_INVERT_BYTE_OPERATION) == 0,
-        -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+        CHECK(applyImageTransformation(totalNrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION) == 0,
+            -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+    }
 
     CLOSE_HANDLES(hImage);
     return 0;

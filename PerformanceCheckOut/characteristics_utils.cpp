@@ -1,29 +1,28 @@
 #include "characteristics_utils.h"
 
 
-VOID printFileHeaderData(BITMAPFILEHEADER bMapFileHeader) {
-    printf("File Header Data\n");
-    printf("bfType: %c%c\n", bMapFileHeader.bfType, bMapFileHeader.bfType >> 8);
-    printf("bfSize: %d\n", bMapFileHeader.bfSize);
-    printf("bfReserved1: %d\n", bMapFileHeader.bfReserved1);
-    printf("bfReserved2: %d\n", bMapFileHeader.bfReserved2);
-    printf("bfOffBits: %d\n", bMapFileHeader.bfOffBits);
-    printf("\n");
+VOID getStringFileHeaderData(BITMAPFILEHEADER bMapFileHeader, std::string& output) {
+    output += std::format("File Header Data\n");
+    output += std::format("bfType: {}{}\n", bMapFileHeader.bfType, bMapFileHeader.bfType >> 8);
+    output += std::format("bfSize: {}\n", bMapFileHeader.bfSize);
+    output += std::format("bfReserved1: {}\n", bMapFileHeader.bfReserved1);
+    output += std::format("bfReserved2: {}\n", bMapFileHeader.bfReserved2);
+    output += std::format("bfOffBits: {}\n", bMapFileHeader.bfOffBits);
 }
 
-VOID printInfoHeaderData(BITMAPINFOHEADER bMapInfoHeader) {
-    printf("Info Header Data\n");
-    printf("biSize: %d\n", bMapInfoHeader.biSize);
-    printf("biWidth: %d\n", bMapInfoHeader.biWidth);
-    printf("biHeight: %d\n", bMapInfoHeader.biHeight);
-    printf("biPlanes: %d\n", bMapInfoHeader.biPlanes);
-    printf("biBitCount: %d\n", bMapInfoHeader.biBitCount);
-    printf("biCompression: %d\n", bMapInfoHeader.biCompression);
-    printf("biSizeImage: %d\n", bMapInfoHeader.biSizeImage);
-    printf("biXPelsPerMeter: %d\n", bMapInfoHeader.biXPelsPerMeter);
-    printf("biYPelsPerMeter: %d\n", bMapInfoHeader.biYPelsPerMeter);
-    printf("biClrUsed: %d\n", bMapInfoHeader.biClrUsed);
-    printf("biClrImportant: %d\n", bMapInfoHeader.biClrImportant);
+VOID getStringInfoHeaderData(BITMAPINFOHEADER bMapInfoHeader, std::string& output) {
+    output += std::format("Info Header Data\n");
+    output += std::format("biSize: {}\n", bMapInfoHeader.biSize);
+    output += std::format("biWidth: {}\n", bMapInfoHeader.biWidth);
+    output += std::format("biHeight: {}\n", bMapInfoHeader.biHeight);
+    output += std::format("biPlanes: {}\n", bMapInfoHeader.biPlanes);
+    output += std::format("biBitCount: {}\n", bMapInfoHeader.biBitCount);
+    output += std::format("biCompression: {}\n", bMapInfoHeader.biCompression);
+    output += std::format("biSizeImage: {}\n", bMapInfoHeader.biSizeImage);
+    output += std::format("biXPelsPerMeter: {}\n", bMapInfoHeader.biXPelsPerMeter);
+    output += std::format("biYPelsPerMeter: {}\n", bMapInfoHeader.biYPelsPerMeter);
+    output += std::format("biClrUsed: {}\n", bMapInfoHeader.biClrUsed);
+    output += std::format("biClrImportant: {}\n", bMapInfoHeader.biClrImportant);
 }
 
 DWORD getStringProcessorMasksAndRelationships(std::string& output) {
@@ -198,8 +197,7 @@ DWORD getStringCpuSetsInformation(std::string& output) {
     return 0;
 }
 
-DWORD writeComputerCharacteristics(LPCSTR filePath) {
-    std::string computerCharacteristics;
+DWORD writeComputerCharacteristics(LPCSTR filePath, std::string& computerCharacteristics) {
     computerCharacteristics.reserve(1000);
     CHECK(getStringCurrentUserSid(computerCharacteristics) == 0, -1, "Could not print the current user SID");
     CHECK(getStringWellKnownSid(WinWorldSid, "Everyone Group", computerCharacteristics) == 0, -1, "Could not print the everyone group SID");
@@ -209,10 +207,10 @@ DWORD writeComputerCharacteristics(LPCSTR filePath) {
     CHECK(getStringCpuSetsInformation(computerCharacteristics) == 0, -1, "Could not print CPU sets information");
 
     HANDLE hFile = CreateFile(filePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, FILE_APPEND_DATA, FILE_ATTRIBUTE_NORMAL, 0);
-    CHECK(hFile != INVALID_HANDLE_VALUE, -1, "Opening the file failed");
+    CHECK(hFile != INVALID_HANDLE_VALUE, -2, "Opening the file failed");
 
     LPCSTR cString = computerCharacteristics.c_str();
-    CHECK(WriteFile(hFile, cString, strlen(cString), NULL, NULL), -1, "Error when writing in file", CLOSE_HANDLES(hFile));
+    CHECK(WriteFile(hFile, cString, strlen(cString), NULL, NULL), -2, "Error when writing in file", CLOSE_HANDLES(hFile));
 
     CLOSE_HANDLES(hFile);
 

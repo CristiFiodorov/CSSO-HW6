@@ -10,6 +10,7 @@
 #include <string>
 #include <format>
 #include <cmath>
+#include <set>
 
 
 #pragma comment(lib, "Shlwapi.lib")
@@ -62,6 +63,23 @@ typedef struct RgbaPixel {
 
 using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
 using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD, DWORD);
+
+typedef struct TransformationUtil {
+    FileTransformFunction fileTransformFunction;
+    LPCSTR resultsFolder;
+
+    bool operator<(const TransformationUtil& other) const {
+        if (fileTransformFunction < other.fileTransformFunction) {
+            return true;
+        }
+        if (other.fileTransformFunction < fileTransformFunction) {
+            return false;
+        }
+
+        return std::strcmp(resultsFolder, other.resultsFolder) < 0;
+    }
+
+} TRANSFORMATION_UTIL, *LPTRANSFORMATION_UTIL;
 
 enum RequestStatus {
     PENDING, 

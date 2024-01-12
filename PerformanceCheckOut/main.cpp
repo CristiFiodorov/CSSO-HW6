@@ -1,27 +1,60 @@
 #include "constants.h"
 #include "image_utils.h"
 #include "characteristics_utils.h"
+#include <set>
 
 static LPCSTR szWindowClass = "RequestClientApp";
 static LPCSTR szTitle = "RequestClientApp";
 
-const int WINDOW_HEIGHT = 800;
-const int WINDOW_WIDTH = 1200;
+#define WINDOW_HEIGHT 800
+#define WINDOW_WIDTH 1200
 
-const int THIRD_WIDTH_PART = WINDOW_WIDTH / 3 - 20;
+#define THIRD_WIDTH_PART WINDOW_WIDTH / 3 - 20
 
-const int VERTICAL_LINE_WIDTH = 5;
-const int CHECKBOX_COMPONENT_HEIGHT = 120;
+#define VERTICAL_LINE_WIDTH 5
+#define CHECKBOX_COMPONENT_HEIGHT 120
 
-const int RESULT_AREA_HEIGHT = WINDOW_HEIGHT / 3 - 75;
+#define RESULT_AREA_HEIGHT WINDOW_HEIGHT / 3 - 75
 
-const int HEADER_HEIGHT = 35;
-const int OUTPUT_COMPONENT_HEIGHT = 2 * HEADER_HEIGHT + 5;
+#define HEADER_HEIGHT 35
+#define OUTPUT_COMPONENT_HEIGHT 2 * HEADER_HEIGHT + 5
 
-DWORD nrCPU = 1;
+
 HINSTANCE hInst;
 HWND openFileButton, filePathLabel, filePathInput, sequentialBox, dynamicBox, staticBox, testingMethodLabel, startButton, grayscaleLabel, grayscaleOutput, invertLabel, invertOutput, bitmapFileHeaderLabel, bitmapFileHeaderTextArea,
 dibHeaderLabel, dibHeaderTextArea, testsPerformanceLabel, testsPerformanceTextArea, pcInfoTextArea;
+
+std::set<TRANSFORMATION_UTIL> testingMethods{};
+
+
+DWORD addCarriageReturnToBuffer(LPSTR* buffer) {
+    DWORD newLineNo = 0, oldSize = 0;
+    for (DWORD i = 0; (*buffer)[i] != '\0'; i++) {
+        oldSize++;
+        if ((*buffer)[i] == '\n') {
+            newLineNo++;
+        }
+    }
+
+    LPSTR replaced = new CHAR[oldSize + newLineNo + 2];
+
+    DWORD p = 0;
+    for (DWORD i = 0; i < oldSize; ++i) {
+        if ((*buffer)[i] == '\n') {
+            replaced[p++] = '\r';
+            replaced[p++] = '\n';
+        }
+        else {
+            replaced[p++] = (*buffer)[i];
+        }
+    }
+
+    replaced[p++] = '\0';
+    delete[](*buffer);
+    *buffer = replaced;
+    return 0;
+}
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -122,8 +155,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         testsPerformanceTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
             2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + 10, 2 * (HEADER_HEIGHT + RESULT_AREA_HEIGHT) + 30 + HEADER_HEIGHT, THIRD_WIDTH_PART, RESULT_AREA_HEIGHT, hWnd, NULL, NULL, NULL);
 
+
+        {
+            std::string output;
+            CHECK_GUI(writeComputerCharacteristics(INFO_FILE_PATH, output) != -1, -1, "Failed to write Computer Characteristics");
+            LPSTR computerCharacteristics = new CHAR[output.size()];
+            memcpy(computerCharacteristics, output.c_str(), output.size());
+            addCarriageReturnToBuffer(&computerCharacteristics);
+            SetWindowText(pcInfoTextArea, computerCharacteristics);
+            delete[] computerCharacteristics;
+        }
+
         break;
     case WM_COMMAND:
+    {
+        DWORD ceva = LOWORD(wParam);
+        printf("ceva");
+    }
         switch (LOWORD(wParam))
         {
         case 2:
@@ -142,15 +190,67 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             CHECK_GUI(GetOpenFileName(&ofn), -1, "Failure when selecting a .bmp image");
             SetWindowText(filePathInput, szFile);
-        
+            
+            break;
         case 3: 
+        {
             SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
+            if (SendMessage(sequentialBox, BM_GETCHECK, 0, 0)) {
+                testingMethods.insert({ fileTransformSequential, RESULTS_SEQ_FOLDER });
+            }
+            else {
+                testingMethods.erase({ fileTransformSequential, RESULTS_SEQ_FOLDER });
+            }
+        }
             break;
         case 4: 
             SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);
+            if (SendMessage(staticBox, BM_GETCHECK, 0, 0)) {
+                testingMethods.insert({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER });
+            }
+            else {
+                testingMethods.erase({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER });
+            }
             break;
         case 5: 
             SendMessage(dynamicBox, BM_SETCHECK, !SendMessage(dynamicBox, BM_GETCHECK, 0, 0), 0);
+            if (SendMessage(dynamicBox, BM_GETCHECK, 0, 0)) {
+                testingMethods.insert({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER });
+            }
+            else {
+                testingMethods.erase({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER });
+            }
+            break;
+        case 6:
+            if (testingMethods.size() < 1) {
+                MessageBox(NULL, "You have to select a testing method!", "Error", NULL);
+                break;
+            }
+
+            {
+                CHAR imagePath[MAX_PATH_LEN];
+                GetWindowText(filePathInput, imagePath, MAX_PATH_LEN);
+                if (strlen(imagePath) < 1) {
+                    MessageBox(NULL, "Invalid file path!", "Error", NULL);
+                }
+                std::string output;
+                DWORD nrCPU = 1;
+                getStringSystemCpuSetsInformation(output, &nrCPU);
+
+                std::string stringFileHeaderData; 
+                std::string stringInfoHeaderData;
+                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData);
+
+                LPSTR textToPrint = new CHAR[stringFileHeaderData.size() + 1];
+                memcpy(textToPrint, stringFileHeaderData.c_str(), stringFileHeaderData.size() + 1);
+                addCarriageReturnToBuffer(&textToPrint);
+                SetWindowText(bitmapFileHeaderTextArea, textToPrint);
+
+                textToPrint = new CHAR[stringInfoHeaderData.size() + 1];
+                memcpy(textToPrint, stringInfoHeaderData.c_str(), stringInfoHeaderData.size() + 1);
+                addCarriageReturnToBuffer(&textToPrint);
+                SetWindowText(dibHeaderTextArea, textToPrint);
+            }
             break;
         }
         break;
