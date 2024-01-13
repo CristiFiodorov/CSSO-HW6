@@ -45,12 +45,12 @@ DWORD applyImageTransformation(const BMP_IMAGE_INFO& bmpImageInfo, const TRANSFO
     sprintf_s(resultImagePath, "%s\\%s_%s_temp.bmp", resultFolder, bmpImageInfo.imageName, transformationInfo.operationName);
 
     HANDLE hResult = CreateFile(resultImagePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-    CHECK(hResult != INVALID_HANDLE_VALUE, -1, "Opening the results file failed");
+    CHECK(hResult != INVALID_HANDLE_VALUE, -2, "Opening the results file failed");
 
-    CHECK(appendBmapHeadersToFile(hResult, bmpImageInfo.bMapFileHeader, bmpImageInfo.bMapInfoHeader) == 0, -1, "Headers could not be appended",
+    CHECK(appendBmapHeadersToFile(hResult, bmpImageInfo.bMapFileHeader, bmpImageInfo.bMapInfoHeader) == 0, -2, "Headers could not be appended",
         CLOSE_HANDLES(hResult));
 
-    CHECK(transformationInfo.fileTransform(bmpImageInfo.hImage, hResult, transformationInfo.pixelTransform, bmpImageInfo.bMapFileHeader.bfOffBits, transformationInfo.nrCPU) == 0, -1, "Transformation failed",
+    CHECK(transformationInfo.fileTransform(bmpImageInfo.hImage, hResult, transformationInfo.pixelTransform, bmpImageInfo.bMapFileHeader.bfOffBits, transformationInfo.nrCPU) == 0, -2, "Transformation failed",
         CLOSE_HANDLES(hResult));
 
     CLOSE_HANDLES(hResult);
@@ -65,7 +65,7 @@ DWORD applyImageTransformation(const BMP_IMAGE_INFO& bmpImageInfo, const TRANSFO
     memcpy(oldImagePath, resultImagePath, MAX_PATH);
 
     sprintf_s(resultImagePath, "%s\\%s_%s_%d_%d.bmp", resultFolder, bmpImageInfo.imageName, transformationInfo.operationName, transformationInfo.nrCPU, elapsedMilliseconds);
-    CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
+    CHECK(MoveFile(oldImagePath, resultImagePath), -2, "Error when naming the file");
 
     CHAR guiResultImagePath[MAX_PATH];
     memset(guiResultImagePath, 0, sizeof(guiResultImagePath));
@@ -88,10 +88,10 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
 
     extractBmpHeaders(hImage, &bMapFileHeader, &bMapInfoHeader);
 
-    CHECK((CHAR)bMapFileHeader.bfType == 'B' && (CHAR)(bMapFileHeader.bfType >> 8) == 'M', -1, "The image type is not bitmap");
-    CHECK(bMapInfoHeader.biBitCount == 32, -1, "The application supports only a count of 4 bytes per pixel");
-    CHECK(bMapInfoHeader.biCompression == 0, -1, "The application supports only compression method None");
-    CHECK(bMapFileHeader.bfOffBits < GetFileSize(hImage, NULL), -1, "The offset where the image data begins is invalid");
+    CHECK((CHAR)bMapFileHeader.bfType == 'B' && (CHAR)(bMapFileHeader.bfType >> 8) == 'M', -1, "The image type is not bitmap", CLOSE_HANDLES(hImage));
+    CHECK(bMapInfoHeader.biBitCount == 32, -1, "The application supports only a count of 4 bytes per pixel", CLOSE_HANDLES(hImage));
+    CHECK(bMapInfoHeader.biCompression == 0, -1, "The application supports only compression method None", CLOSE_HANDLES(hImage));
+    CHECK(bMapFileHeader.bfOffBits < GetFileSize(hImage, NULL), -1, "The offset where the image data begins is invalid", CLOSE_HANDLES(hImage));
 
     getStringFileHeaderData(bMapFileHeader, imageTransformationResults.stringFileHeaderData);
     getStringInfoHeaderData(bMapInfoHeader, imageTransformationResults.stringInfoHeaderData);

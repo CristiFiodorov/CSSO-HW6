@@ -81,13 +81,15 @@ DWORD getStringAffinityMasksAndNumaNodesCounts(std::string& output) {
     processAffinityMask = (PDWORD_PTR)malloc(sizeof(DWORD_PTR));
     systemAffinityMask = (PDWORD_PTR)malloc(sizeof(DWORD_PTR));
 
-    CHECK(GetProcessAffinityMask(GetCurrentProcess(), processAffinityMask, systemAffinityMask), -1, "Could not extract affinity masks");
+    CHECK(GetProcessAffinityMask(GetCurrentProcess(), processAffinityMask, systemAffinityMask), -1, "Could not extract affinity masks", 
+        free(processAffinityMask), free(systemAffinityMask));
     output += std::format("Current Process' affinity mask: {}\n", *processAffinityMask);
     output += std::format("Current System's affinity mask: {}\n", *systemAffinityMask);
 
     ULONG highestNodeNumber;
 
-    CHECK(GetNumaHighestNodeNumber(&highestNodeNumber), -1, "Could not extract the highest numa node");
+    CHECK(GetNumaHighestNodeNumber(&highestNodeNumber), -1, "Could not extract the highest numa node",
+        free(processAffinityMask), free(systemAffinityMask));
     output += std::format("Number of NUMA nodes: {}\n", highestNodeNumber + 1);
 
     free(processAffinityMask);
