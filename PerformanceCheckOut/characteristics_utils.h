@@ -25,3 +25,5 @@ DWORD getStringSystemCpuSetsInformation(std::string& output, LPDWORD nrCPU);
 DWORD getStringCpuSetsInformation(std::string& output);
 
 DWORD writeComputerCharacteristics(LPCSTR filePath, std::string& computerCharacteristics);
+
+std::string getStringFromTestResults(const std::vector<TEST_RESULT>& testResults);

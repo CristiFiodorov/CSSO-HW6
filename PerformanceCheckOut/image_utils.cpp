@@ -114,12 +114,12 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
             DWORD elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, 
                 RESULTS_GENERAL_FOLDER, SZ_GRAYSCALE_OPERATION, grayscaleOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-            testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
+            testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
 
             elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, 
                 RESULTS_GENERAL_FOLDER, SZ_INVERT_BYTE_OPERATION, invertOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Invert Bytes Transformation Failed", CLOSE_HANDLES(hImage));
-            testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
+            testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
 
             if (!transformationUtil.iterate) {
                 break;

@@ -64,6 +64,7 @@ typedef struct RgbaPixel {
 
 
 typedef struct TestResult {
+    LPCSTR testingMethod;
     DWORD nrWorkers;
     DWORD elapsedMilliseconds;
     LPCSTR OperationName;
@@ -73,19 +74,17 @@ using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
 using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD, DWORD);
 
 typedef struct TransformationUtil {
+    LPCSTR transformationName;
     FileTransformFunction fileTransformFunction;
     LPCSTR resultsFolder;
     BOOL iterate;
 
     bool operator<(const TransformationUtil& other) const {
-        if (fileTransformFunction < other.fileTransformFunction) {
+        if (strcmp(transformationName, other.transformationName) < 0) {
             return true;
         }
-        if (other.fileTransformFunction < fileTransformFunction) {
-            return false;
-        }
 
-        return std::strcmp(resultsFolder, other.resultsFolder) < 0;
+        return false;
     }
 
 } TRANSFORMATION_UTIL, *LPTRANSFORMATION_UTIL;
@@ -148,3 +147,7 @@ typedef struct DynamicThreadParams {
 #define SZ_GRAYSCALE_OPERATION "grayscale"
 #define SZ_INVERT_BYTE_OPERATION "invert_bytes"
 #define WORKER_MAPPING "worker_mapping"
+
+#define SZ_SEQ_METHOD "Squential"
+#define SZ_STATIC_METHOD "Parallel Static"
+#define SZ_DYNAMIC_METHOD "Parallel Dynamic"

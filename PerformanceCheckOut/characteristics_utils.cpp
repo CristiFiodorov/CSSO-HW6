@@ -216,3 +216,12 @@ DWORD writeComputerCharacteristics(LPCSTR filePath, std::string& computerCharact
 
     return 0;
 }
+
+
+std::string getStringFromTestResults(const std::vector<TEST_RESULT>& testResults) {
+    std::string stringTestResults;
+    for (auto testResult : testResults) {
+        stringTestResults += std::format("Testing Method: {}, Nr workers: {}, Operation Name: {}, Elapsed time: {}ms \r\n\r\n", testResult.testingMethod, testResult.nrWorkers, testResult.OperationName, testResult.elapsedMilliseconds);
+    }
+    return stringTestResults;
+}

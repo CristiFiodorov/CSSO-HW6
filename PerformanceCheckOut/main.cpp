@@ -194,29 +194,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(sequentialBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
+                testingMethods.insert({ SZ_SEQ_METHOD, fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
             else {
-                testingMethods.erase({ fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
+                testingMethods.erase({ SZ_SEQ_METHOD, fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
         }
             break;
         case 4: 
             SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(staticBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
+                testingMethods.insert({ SZ_STATIC_METHOD, fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
             }
             else {
-                testingMethods.erase({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
+                testingMethods.erase({ SZ_STATIC_METHOD, fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
             }
             break;
         case 5: 
             SendMessage(dynamicBox, BM_SETCHECK, !SendMessage(dynamicBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(dynamicBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
+                testingMethods.insert({ SZ_DYNAMIC_METHOD, fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
             }
             else {
-                testingMethods.erase({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
+                testingMethods.erase({ SZ_DYNAMIC_METHOD, fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
             }
             break;
         case 6:
@@ -245,6 +245,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults);
 
+                std::string stringTestResults = getStringFromTestResults(testResults);
+                SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());
+
                 LPSTR textToPrint = new CHAR[stringFileHeaderData.size() + 1];
                 memcpy(textToPrint, stringFileHeaderData.c_str(), stringFileHeaderData.size() + 1);
                 addCarriageReturnToBuffer(&textToPrint);
@@ -268,7 +271,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 addCarriageReturnToBuffer(&textToPrint);
                 SetWindowText(invertOutput, textToPrint);
                 delete[] textToPrint;
-
             }
             break;
         }
