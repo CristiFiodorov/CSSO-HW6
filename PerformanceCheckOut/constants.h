@@ -11,6 +11,7 @@
 #include <format>
 #include <cmath>
 #include <set>
+#include <vector>
 
 
 #pragma comment(lib, "Shlwapi.lib")
@@ -60,6 +61,13 @@ typedef struct RgbaPixel {
     BYTE blue;
     BYTE alpha;
 } RGBA_PIXEL, *LPRGBA_PIXEL;
+
+
+typedef struct TestResult {
+    DWORD nrWorkers;
+    DWORD elapsedMilliseconds;
+    LPCSTR OperationName;
+} TEST_RESULT, *LPTEST_RESULT;
 
 using PixelTransformFunction = DWORD(*)(LPRGBA_PIXEL);
 using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, DWORD, DWORD);

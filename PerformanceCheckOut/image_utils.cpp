@@ -70,10 +70,10 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
     setFileReadPermissionOnly(resultImagePath);
 
-    return 0;
+    return elapsedMilliseconds;
 }
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData) {
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData, std::vector<TEST_RESULT>& testResults) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -102,11 +102,13 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
 
     for (auto& transformationUtil : transformationUtils) {
         for (DWORD nrCPU = 1; nrCPU <= totalNrCPU * 2; ++nrCPU) {
-            CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION) == 0,
-                -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+            DWORD elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION);
+            CHECK(elapsedMilliseconds != -1, -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+            testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
 
-            CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION) == 0,
-                -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+            elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION);
+            CHECK(elapsedMilliseconds != -1, -1, "Invert Bytes Transformation Failed", CLOSE_HANDLES(hImage));
+            testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
 
             if (!transformationUtil.iterate) {
                 break;

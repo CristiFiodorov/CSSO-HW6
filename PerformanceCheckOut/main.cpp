@@ -26,6 +26,7 @@ HWND openFileButton, filePathLabel, filePathInput, sequentialBox, dynamicBox, st
 dibHeaderLabel, dibHeaderTextArea, testsPerformanceLabel, testsPerformanceTextArea, pcInfoTextArea;
 
 std::set<TRANSFORMATION_UTIL> testingMethods{};
+std::vector<TEST_RESULT> testResults{};
 
 
 DWORD addCarriageReturnToBuffer(LPSTR* buffer) {
@@ -233,6 +234,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 GetWindowText(filePathInput, imagePath, MAX_PATH_LEN);
                 if (strlen(imagePath) < 1) {
                     MessageBox(NULL, "Invalid file path!", "Error", NULL);
+                    break;
                 }
                 std::string output;
                 DWORD nrCPU = 1;
@@ -240,7 +242,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 std::string stringFileHeaderData; 
                 std::string stringInfoHeaderData;
-                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData);
+                testResults.clear();
+                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData, testResults);
 
                 LPSTR textToPrint = new CHAR[stringFileHeaderData.size() + 1];
                 memcpy(textToPrint, stringFileHeaderData.c_str(), stringFileHeaderData.size() + 1);

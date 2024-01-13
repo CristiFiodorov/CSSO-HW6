@@ -20,4 +20,4 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     LPCSTR resultFolder, LPCSTR operationName);
 
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData);
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData, std::vector<TEST_RESULT>& testResults);
