@@ -57,118 +57,126 @@ DWORD addCarriageReturnToBuffer(LPSTR* buffer) {
     return 0;
 }
 
+DWORD printDataToComponent(std::string dataString, HWND componentHandler) {
+    LPSTR textToPrint = new CHAR[dataString.size() + 1];
+    memcpy(textToPrint, dataString.c_str(), dataString.size() + 1);
+    addCarriageReturnToBuffer(&textToPrint);
+    SetWindowText(componentHandler, textToPrint);
+    delete[] textToPrint;
+    return 0;
+}
+
+
+DWORD generateUIComponents(HWND &hWnd) {
+    CreateWindow("Static", "Personal Computer Information", WS_VISIBLE | WS_CHILD | SS_CENTER,
+        0, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+        0, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
+
+    CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
+        THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    pcInfoTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        0, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, WINDOW_HEIGHT - 80, hWnd, NULL, NULL, NULL);
+
+    openFileButton = CreateWindow("Button", "Select BMP Image", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)2, NULL, NULL);
+
+    CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
+        THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    filePathLabel = CreateWindow("Static", "Selected File Path:", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    filePathInput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 2 * HEADER_HEIGHT + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+        THIRD_WIDTH_PART, 3 * HEADER_HEIGHT + 15,
+        THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 10, hWnd, NULL, NULL, NULL);
+
+    testingMethodLabel = CreateWindow("Static", "Please select the testing method:", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 3 * HEADER_HEIGHT + 25,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    sequentialBox = CreateWindow("Button", "Sequential", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        4 * HEADER_HEIGHT + 30,
+        THIRD_WIDTH_PART,
+        HEADER_HEIGHT, hWnd, (HMENU)3, NULL, NULL);
+
+    staticBox = CreateWindow("Button", "Parallel Static", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        4 * HEADER_HEIGHT + 60,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)4, NULL, NULL);
+
+    dynamicBox = CreateWindow("Button", "Parallel Dynamic", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        4 * HEADER_HEIGHT + 90,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)5, NULL, NULL);
+
+    startButton = CreateWindow("Button", "Start Transformation", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        4 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 15,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)6, NULL, NULL);
+
+    grayscaleLabel = CreateWindow("Static", "Grayscale Operation Output", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 30,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 45,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    invertLabel = CreateWindow("Static", "Invert Bytes Operation Output", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 60,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 75,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    bitmapFileHeaderLabel = CreateWindow("Static", "Bitmap File Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
+
+    bitmapFileHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, RESULT_HEADER_AREA, hWnd, NULL, NULL, NULL);
+
+    dibHeaderLabel = CreateWindow("Static", "Dib Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT + RESULT_HEADER_AREA + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    dibHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * HEADER_HEIGHT + RESULT_HEADER_AREA + 15, THIRD_WIDTH_PART, RESULT_HEADER_AREA, hWnd, NULL, NULL, NULL);
+
+    testsPerformanceLabel = CreateWindow("Static", "Tests Performance", WS_VISIBLE | WS_CHILD | SS_CENTER,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * (HEADER_HEIGHT + RESULT_HEADER_AREA) + 25, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    testsPerformanceTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
+        2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * (HEADER_HEIGHT + RESULT_HEADER_AREA) + 30 + HEADER_HEIGHT, THIRD_WIDTH_PART, RESULT_TESTS_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    return 0;
+}
+
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
-    case WM_CREATE:
-        CreateWindow("Static", "Personal Computer Information", WS_VISIBLE | WS_CHILD | SS_CENTER,
-            0, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
-            0, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
-
-        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
-            THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        pcInfoTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-            0, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, WINDOW_HEIGHT - 80, hWnd, NULL, NULL, NULL);
-        
-        openFileButton = CreateWindow("Button", "Select BMP Image", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)2, NULL, NULL);
-
-        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDVERT,
-            THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH + THIRD_WIDTH_PART, 0, VERTICAL_LINE_WIDTH, WINDOW_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        filePathLabel = CreateWindow("Static", "Selected File Path:", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        filePathInput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 2 * HEADER_HEIGHT + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
-            THIRD_WIDTH_PART, 3 * HEADER_HEIGHT + 15,
-            THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 10, hWnd, NULL, NULL, NULL);
-
-        testingMethodLabel = CreateWindow("Static", "Please select the testing method:", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 3 * HEADER_HEIGHT + 25,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        sequentialBox = CreateWindow("Button", "Sequential", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
-            4 * HEADER_HEIGHT + 30,
-            THIRD_WIDTH_PART, 
-            HEADER_HEIGHT, hWnd, (HMENU)3, NULL, NULL);
-
-        staticBox = CreateWindow("Button", "Parallel Static", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
-            4 * HEADER_HEIGHT + 60,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)4, NULL, NULL);
-
-        dynamicBox = CreateWindow("Button", "Parallel Dynamic", WS_VISIBLE | WS_CHILD | BS_CHECKBOX,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH, 
-            4 * HEADER_HEIGHT + 90,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)5, NULL, NULL);
-
-        startButton = CreateWindow("Button", "Start Transformation", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-            4 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 15,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)6, NULL, NULL);
-
-        grayscaleLabel = CreateWindow("Static", "Grayscale Operation Output", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-            5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 30,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-            6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 45,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        invertLabel = CreateWindow("Static", "Invert Bytes Operation Output", WS_VISIBLE | WS_CHILD,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-            5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 60,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
-            THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-            6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 75,
-            THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        bitmapFileHeaderLabel = CreateWindow("Static", "Bitmap File Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 0, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        CreateWindow("Static", "", WS_CHILD | WS_VISIBLE | SS_ETCHEDHORZ,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT, THIRD_WIDTH_PART, 2, hWnd, NULL, NULL, NULL);
-
-        bitmapFileHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT + 5, THIRD_WIDTH_PART, RESULT_HEADER_AREA, hWnd, NULL, NULL, NULL);
-
-        dibHeaderLabel = CreateWindow("Static", "Dib Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, HEADER_HEIGHT + RESULT_HEADER_AREA + 10, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        dibHeaderTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * HEADER_HEIGHT + RESULT_HEADER_AREA + 15, THIRD_WIDTH_PART, RESULT_HEADER_AREA, hWnd, NULL, NULL, NULL);
-
-        testsPerformanceLabel = CreateWindow("Static", "Tests Performance", WS_VISIBLE | WS_CHILD | SS_CENTER,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * (HEADER_HEIGHT + RESULT_HEADER_AREA) + 25, THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
-
-        testsPerformanceTextArea = CreateWindowEx(WS_EX_CLIENTEDGE, "Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
-            2 * THIRD_WIDTH_PART + 2 * VERTICAL_LINE_WIDTH, 2 * (HEADER_HEIGHT + RESULT_HEADER_AREA) + 30 + HEADER_HEIGHT, THIRD_WIDTH_PART, RESULT_TESTS_HEIGHT, hWnd, NULL, NULL, NULL);
-
-
-        {
-            std::string output;
-            CHECK_GUI(writeComputerCharacteristics(INFO_FILE_PATH, output) != -1, -1, "Failed to write Computer Characteristics");
-            LPSTR computerCharacteristics = new CHAR[output.size() + 1];
-            memcpy(computerCharacteristics, output.c_str(), output.size() + 1);
-            addCarriageReturnToBuffer(&computerCharacteristics);
-            SetWindowText(pcInfoTextArea, computerCharacteristics);
-            delete[] computerCharacteristics;
-        }
-
+    case WM_CREATE: {
+        generateUIComponents(hWnd);
+        std::string output;
+        CHECK_GUI(writeComputerCharacteristics(INFO_FILE_PATH, output) != -1, -1, "Failed to write Computer Characteristics");
+        printDataToComponent(output, pcInfoTextArea);
         break;
+    }
     case WM_COMMAND:
         switch (LOWORD(wParam))
         {
@@ -188,9 +196,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             CHECK_GUI(GetOpenFileName(&ofn), -1, "Failure when selecting a .bmp image");
             SetWindowText(filePathInput, szFile);
-            
+
             break;
-        case 3: 
+        case 3:
         {
             SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(sequentialBox, BM_GETCHECK, 0, 0)) {
@@ -200,8 +208,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 testingMethods.erase({ SZ_SEQ_METHOD, fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
         }
-            break;
-        case 4: 
+        break;
+        case 4:
             SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(staticBox, BM_GETCHECK, 0, 0)) {
                 testingMethods.insert({ SZ_STATIC_METHOD, fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
@@ -210,7 +218,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 testingMethods.erase({ SZ_STATIC_METHOD, fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
             }
             break;
-        case 5: 
+        case 5:
             SendMessage(dynamicBox, BM_SETCHECK, !SendMessage(dynamicBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(dynamicBox, BM_GETCHECK, 0, 0)) {
                 testingMethods.insert({ SZ_DYNAMIC_METHOD, fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
@@ -219,60 +227,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 testingMethods.erase({ SZ_DYNAMIC_METHOD, fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
             }
             break;
-        case 6:
+        case 6: {
             if (testingMethods.size() < 1) {
                 MessageBox(NULL, "You have to select a testing method!", "Error", NULL);
                 break;
             }
 
-            {
-                CHAR imagePath[MAX_PATH_LEN];
-                GetWindowText(filePathInput, imagePath, MAX_PATH_LEN);
-                if (strlen(imagePath) < 1) {
-                    MessageBox(NULL, "Invalid file path!", "Error", NULL);
-                    break;
-                }
-                std::string output;
-                DWORD nrCPU = 1;
-                getStringSystemCpuSetsInformation(output, &nrCPU);
-
-                std::string stringFileHeaderData; 
-                std::string stringInfoHeaderData;
-                std::string grayscaleOutputPath;
-                std::string invertOutputPath;
-                
-                testResults.clear();
-
-                applyImageTransformations(imagePath, nrCPU, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
-
-                std::string stringTestResults = getStringFromTestResults(testResults);
-                SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());
-
-                LPSTR textToPrint = new CHAR[stringFileHeaderData.size() + 1];
-                memcpy(textToPrint, stringFileHeaderData.c_str(), stringFileHeaderData.size() + 1);
-                addCarriageReturnToBuffer(&textToPrint);
-                SetWindowText(bitmapFileHeaderTextArea, textToPrint);
-                delete[] textToPrint;
-
-                textToPrint = new CHAR[stringInfoHeaderData.size() + 1];
-                memcpy(textToPrint, stringInfoHeaderData.c_str(), stringInfoHeaderData.size() + 1);
-                addCarriageReturnToBuffer(&textToPrint);
-                SetWindowText(dibHeaderTextArea, textToPrint);
-                delete[] textToPrint;
-
-                textToPrint = new CHAR[grayscaleOutputPath.size() + 1];
-                memcpy(textToPrint, grayscaleOutputPath.c_str(), grayscaleOutputPath.size() + 1);
-                addCarriageReturnToBuffer(&textToPrint);
-                SetWindowText(grayscaleOutput, textToPrint);
-                delete[] textToPrint;
-
-                textToPrint = new CHAR[invertOutputPath.size() + 1];
-                memcpy(textToPrint, invertOutputPath.c_str(), invertOutputPath.size() + 1);
-                addCarriageReturnToBuffer(&textToPrint);
-                SetWindowText(invertOutput, textToPrint);
-                delete[] textToPrint;
+            CHAR imagePath[MAX_PATH_LEN];
+            GetWindowText(filePathInput, imagePath, MAX_PATH_LEN);
+            if (strlen(imagePath) < 1) {
+                MessageBox(NULL, "Invalid file path!", "Error", NULL);
+                break;
             }
+            std::string output;
+            DWORD nrCPU = 1;
+            getStringSystemCpuSetsInformation(output, &nrCPU);
+
+            std::string stringFileHeaderData;
+            std::string stringInfoHeaderData;
+            std::string grayscaleOutputPath;
+            std::string invertOutputPath;
+
+            testResults.clear();
+
+            applyImageTransformations(imagePath, nrCPU, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
+
+            std::string stringTestResults = getStringFromTestResults(testResults);
+            SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());
+
+            printDataToComponent(stringFileHeaderData, bitmapFileHeaderTextArea);
+            printDataToComponent(stringInfoHeaderData, dibHeaderTextArea);
+            printDataToComponent(grayscaleOutputPath, grayscaleOutput);
+            printDataToComponent(invertOutputPath, invertOutput);
             break;
+        }
         }
         break;
     case WM_DESTROY:
