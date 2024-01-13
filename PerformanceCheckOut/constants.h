@@ -153,8 +153,6 @@ typedef struct TransformationInfo {
 
 #define INFO_FILE_PATH "C:\\Facultate\\CSSO\\Week6\\info.txt"
 
-#define RESULTS_GENERAL_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\general"
-
 #define RESULTS_SEQ_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\secvential"
 #define RESULTS_STATIC_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\static"
 #define RESULTS_DYNAMIC_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\dinamic"
@@ -170,6 +168,6 @@ typedef struct TransformationInfo {
 #define SZ_INVERT_BYTE_OPERATION "invert_bytes"
 #define WORKER_MAPPING "worker_mapping"
 
-#define SZ_SEQ_METHOD "Squential"
+#define SZ_SEQ_METHOD "Sequential"
 #define SZ_STATIC_METHOD "Parallel Static"
 #define SZ_DYNAMIC_METHOD "Parallel Dynamic"

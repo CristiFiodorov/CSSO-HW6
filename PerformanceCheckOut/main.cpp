@@ -23,7 +23,7 @@ static LPCSTR szTitle = "RequestClientApp";
 
 HINSTANCE hInst;
 HWND openFileButton, filePathLabel, filePathInput, sequentialBox, dynamicBox, staticBox, testingMethodLabel, startButton, grayscaleLabel, grayscaleOutput, invertLabel, invertOutput, bitmapFileHeaderLabel, bitmapFileHeaderTextArea,
-dibHeaderLabel, dibHeaderTextArea, testsPerformanceLabel, testsPerformanceTextArea, pcInfoTextArea;
+dibHeaderLabel, dibHeaderTextArea, testsPerformanceLabel, testsPerformanceTextArea, pcInfoTextArea, selectFolderButton, outputFolderBox;
 
 std::set<TRANSFORMATION_UTIL> testingMethods{};
 std::vector<TEST_RESULT> testResults{};
@@ -116,29 +116,39 @@ DWORD generateUIComponents(HWND &hWnd) {
         4 * HEADER_HEIGHT + 90,
         THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)5, NULL, NULL);
 
-    startButton = CreateWindow("Button", "Start Transformation", WS_VISIBLE | WS_CHILD,
+    selectFolderButton = CreateWindow("Button", "Select Folder", WS_VISIBLE | WS_CHILD,
         THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
         4 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 15,
-        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)6, NULL, NULL);
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)7, NULL, NULL);
 
-    grayscaleLabel = CreateWindow("Static", "Grayscale Operation Output", WS_VISIBLE | WS_CHILD,
+    outputFolderBox = CreateWindow("Static", "", WS_VISIBLE | WS_CHILD | WS_BORDER,
         THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
         5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 30,
         THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
-    grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
+    startButton = CreateWindow("Button", "Start Transformation", WS_VISIBLE | WS_CHILD,
         THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
         6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 45,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, (HMENU)6, NULL, NULL);
+
+    grayscaleLabel = CreateWindow("Static", "Grayscale Operation Output", WS_VISIBLE | WS_CHILD,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        7 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 60,
+        THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
+
+    grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
+        THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
+        8 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 75,
         THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
     invertLabel = CreateWindow("Static", "Invert Bytes Operation Output", WS_VISIBLE | WS_CHILD,
         THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-        5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 60,
+        7 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 90,
         THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
     invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
         THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
-        6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 75,
+        8 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 105,
         THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
     bitmapFileHeaderLabel = CreateWindow("Static", "Bitmap File Header", WS_VISIBLE | WS_CHILD | SS_CENTER,
@@ -234,11 +244,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
 
             CHAR imagePath[MAX_PATH_LEN];
+            memset(imagePath, 0, sizeof(imagePath));
+
             GetWindowText(filePathInput, imagePath, MAX_PATH_LEN);
             if (strlen(imagePath) < 1) {
                 MessageBox(NULL, "Invalid file path!", "Error", NULL);
                 break;
             }
+
             std::string output;
             DWORD nrCPU = 1;
             getStringSystemCpuSetsInformation(output, &nrCPU);
@@ -250,7 +263,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             testResults.clear();
 
-            applyImageTransformations(imagePath, nrCPU, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
+            CHAR outputFolder[MAX_PATH_LEN];
+            memset(outputFolder, 0, sizeof(outputFolder));
+
+            GetWindowText(outputFolderBox, outputFolder, MAX_PATH_LEN);
+            if (strlen(outputFolder) < 1) {
+                MessageBox(NULL, "Invalid file path!", "Error", NULL);
+                break;
+            }
+
+            applyImageTransformations(imagePath, nrCPU, outputFolder, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
 
             std::string stringTestResults = getStringFromTestResults(testResults);
             SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());
@@ -259,6 +281,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             printDataToComponent(stringInfoHeaderData, dibHeaderTextArea);
             printDataToComponent(grayscaleOutputPath, grayscaleOutput);
             printDataToComponent(invertOutputPath, invertOutput);
+            break;
+        }
+        case 7: 
+        {
+            BROWSEINFO browseInfo = { 0 };
+            browseInfo.hwndOwner = hWnd;
+            browseInfo.ulFlags = BIF_RETURNONLYFSDIRS;
+            LPITEMIDLIST pidl = SHBrowseForFolder(&browseInfo);
+            CHECK_GUI(pidl, -1, "Could not extract folder");
+
+            CHAR folderPath[MAX_PATH];
+            SHGetPathFromIDList(pidl, folderPath);
+
+            SetWindowText(outputFolderBox, folderPath);
+
+            CoTaskMemFree(pidl);
             break;
         }
         }
@@ -289,9 +327,6 @@ int WINAPI WinMain(
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     result = SHCreateDirectoryEx(NULL, RESULTS_DYNAMIC_FOLDER, NULL);
-    CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
-
-    result = SHCreateDirectoryEx(NULL, RESULTS_GENERAL_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     WNDCLASSEX wcex;

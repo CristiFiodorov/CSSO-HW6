@@ -78,7 +78,7 @@ DWORD applyImageTransformation(const BMP_IMAGE_INFO& bmpImageInfo, const TRANSFO
     return elapsedMilliseconds;
 }
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TRANSFORMATION_UTIL>& transformationUtils, const IMAGE_TRANSFORMATION_RESULTS& imageTransformationResults) {
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, LPCSTR guiOutputFolder, const std::set<TRANSFORMATION_UTIL>& transformationUtils, const IMAGE_TRANSFORMATION_RESULTS& imageTransformationResults) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -108,12 +108,12 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
     for (auto& transformationUtil : transformationUtils) {
         for (DWORD nrCPU = 1; nrCPU <= totalNrCPU * 2; ++nrCPU) {
             TRANSFORMATION_INFO transformation_info = { nrCPU, SZ_GRAYSCALE_OPERATION, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform };
-            DWORD elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, RESULTS_GENERAL_FOLDER, imageTransformationResults.grayscaleOutputPath);
+            DWORD elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, guiOutputFolder, imageTransformationResults.grayscaleOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
             imageTransformationResults.testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
 
             transformation_info = { nrCPU, SZ_INVERT_BYTE_OPERATION, transformationUtil.fileTransformFunction, applyInvertBytesTransform };
-            elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, RESULTS_GENERAL_FOLDER, imageTransformationResults.invertOutputPath);
+            elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, guiOutputFolder, imageTransformationResults.invertOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Invert Bytes Transformation Failed", CLOSE_HANDLES(hImage));
             imageTransformationResults.testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
 

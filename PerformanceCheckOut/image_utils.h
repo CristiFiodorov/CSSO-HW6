@@ -18,4 +18,4 @@ DWORD applyImageTransformation(const BMP_IMAGE_INFO& bmpImageInfo, const TRANSFO
     LPCSTR resultFolder, LPCSTR guiResultsFolder, std::string& outputPath);
 
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TRANSFORMATION_UTIL>& transformationUtils, const IMAGE_TRANSFORMATION_RESULTS& imageTransformationResults);
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, LPCSTR guiOutputFolder, const std::set<TRANSFORMATION_UTIL>& transformationUtils, const IMAGE_TRANSFORMATION_RESULTS& imageTransformationResults);
