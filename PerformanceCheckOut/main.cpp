@@ -209,7 +209,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
             break;
         case 3:
-        {
             SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(sequentialBox, BM_GETCHECK, 0, 0)) {
                 testingMethods.insert({ SZ_SEQ_METHOD, fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
@@ -217,7 +216,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             else {
                 testingMethods.erase({ SZ_SEQ_METHOD, fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
-        }
         break;
         case 4:
             SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);

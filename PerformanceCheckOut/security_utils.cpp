@@ -14,7 +14,7 @@ PTOKEN_USER getCurrentUserToken() {
 
 DWORD getStringCurrentUserSid(std::string& output) {
     PTOKEN_USER pTokenUser = getCurrentUserToken();
-    CHECK(pTokenUser, -1, "Failed to extract the current user token", delete[] pTokenUser);
+    CHECK(pTokenUser, -1, "Failed to extract the current user token");
 
     LPSTR szUserSid;
     CHECK(ConvertSidToStringSid(pTokenUser->User.Sid, &szUserSid), -1, "Could not obtain the string representation of a SID", delete[] pTokenUser);
