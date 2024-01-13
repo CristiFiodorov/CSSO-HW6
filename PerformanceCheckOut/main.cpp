@@ -160,8 +160,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             std::string output;
             CHECK_GUI(writeComputerCharacteristics(INFO_FILE_PATH, output) != -1, -1, "Failed to write Computer Characteristics");
-            LPSTR computerCharacteristics = new CHAR[output.size()];
-            memcpy(computerCharacteristics, output.c_str(), output.size());
+            LPSTR computerCharacteristics = new CHAR[output.size() + 1];
+            memcpy(computerCharacteristics, output.c_str(), output.size() + 1);
             addCarriageReturnToBuffer(&computerCharacteristics);
             SetWindowText(pcInfoTextArea, computerCharacteristics);
             delete[] computerCharacteristics;
@@ -197,29 +197,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
             SendMessage(sequentialBox, BM_SETCHECK, !SendMessage(sequentialBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(sequentialBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformSequential, RESULTS_SEQ_FOLDER });
+                testingMethods.insert({ fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
             else {
-                testingMethods.erase({ fileTransformSequential, RESULTS_SEQ_FOLDER });
+                testingMethods.erase({ fileTransformSequential, RESULTS_SEQ_FOLDER, FALSE });
             }
         }
             break;
         case 4: 
             SendMessage(staticBox, BM_SETCHECK, !SendMessage(staticBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(staticBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER });
+                testingMethods.insert({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
             }
             else {
-                testingMethods.erase({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER });
+                testingMethods.erase({ fileTransformParallelStatic, RESULTS_STATIC_FOLDER, TRUE });
             }
             break;
         case 5: 
             SendMessage(dynamicBox, BM_SETCHECK, !SendMessage(dynamicBox, BM_GETCHECK, 0, 0), 0);
             if (SendMessage(dynamicBox, BM_GETCHECK, 0, 0)) {
-                testingMethods.insert({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER });
+                testingMethods.insert({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
             }
             else {
-                testingMethods.erase({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER });
+                testingMethods.erase({ fileTransformParallelDynamic, RESULTS_DYNAMIC_FOLDER, TRUE });
             }
             break;
         case 6:

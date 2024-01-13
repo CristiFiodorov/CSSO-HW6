@@ -66,7 +66,7 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     CHAR oldImagePath[MAX_PATH];
     memcpy(oldImagePath, resultImagePath, MAX_PATH);
 
-    sprintf_s(resultImagePath, "%s\\%s_%s_%d.bmp", resultFolder, imageName, operationName, elapsedMilliseconds);
+    sprintf_s(resultImagePath, "%s\\%s_%s_%d_%d.bmp", resultFolder, imageName, operationName, nrCPU, elapsedMilliseconds);
     CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
     setFileReadPermissionOnly(resultImagePath);
 
@@ -101,11 +101,17 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
 
 
     for (auto& transformationUtil : transformationUtils) {
-        CHECK(applyImageTransformation(totalNrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION) == 0,
-            -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+        for (DWORD nrCPU = 1; nrCPU <= totalNrCPU * 2; ++nrCPU) {
+            CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION) == 0,
+                -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
 
-        CHECK(applyImageTransformation(totalNrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION) == 0,
-            -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+            CHECK(applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION) == 0,
+                -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
+
+            if (!transformationUtil.iterate) {
+                break;
+            }
+        }
     }
 
     CLOSE_HANDLES(hImage);

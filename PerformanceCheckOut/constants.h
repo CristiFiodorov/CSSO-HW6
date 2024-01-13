@@ -67,6 +67,7 @@ using FileTransformFunction = DWORD(*)(HANDLE, HANDLE, PixelTransformFunction, D
 typedef struct TransformationUtil {
     FileTransformFunction fileTransformFunction;
     LPCSTR resultsFolder;
+    BOOL iterate;
 
     bool operator<(const TransformationUtil& other) const {
         if (fileTransformFunction < other.fileTransformFunction) {
