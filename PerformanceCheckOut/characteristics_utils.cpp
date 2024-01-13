@@ -227,3 +227,13 @@ std::string getStringFromTestResults(const std::vector<TEST_RESULT>& testResults
     }
     return stringTestResults;
 }
+
+std::string getCSVContentFromTestsResults(const std::vector<TEST_RESULT>& testResults) {
+    std::string CSVOutput;
+    CSVOutput += "Method,Transform Type,Workers Count,Time\r\n";
+
+    for (auto testResult : testResults) {
+        CSVOutput += std::format("{},{},{},{}\r\n", testResult.testingMethod, testResult.OperationName, testResult.nrWorkers, testResult.elapsedMilliseconds);
+    }
+    return CSVOutput;
+}

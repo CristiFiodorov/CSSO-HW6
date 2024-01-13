@@ -171,3 +171,5 @@ typedef struct TransformationInfo {
 #define SZ_SEQ_METHOD "Sequential"
 #define SZ_STATIC_METHOD "Parallel Static"
 #define SZ_DYNAMIC_METHOD "Parallel Dynamic"
+
+#define CSV_TABLE_PATH "C:\\Facultate\\CSSO\\Week6\\comp.txt"

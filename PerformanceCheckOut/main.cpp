@@ -175,6 +175,15 @@ DWORD generateUIComponents(HWND &hWnd) {
     return 0;
 }
 
+DWORD insertCSVToFile(LPCSTR filePath, std::string csvResults) {
+    HANDLE hFile = CreateFile(filePath, GENERIC_WRITE, NULL, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+    CHECK(hFile != INVALID_HANDLE_VALUE, -2, "Opening the file failed");
+
+    CHECK(WriteFile(hFile, csvResults.c_str(), csvResults.size(), NULL, NULL), -2, "Error when writing in file", 
+        CLOSE_HANDLES(hFile));
+
+    CLOSE_HANDLES(hFile);
+}
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -273,12 +282,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             applyImageTransformations(imagePath, nrCPU, outputFolder, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
 
             std::string stringTestResults = getStringFromTestResults(testResults);
+            std::string csvResults = getCSVContentFromTestsResults(testResults);
+            insertCSVToFile(CSV_TABLE_PATH, csvResults);
+
+            stringTestResults += std::format("The results in a CSV format:\r\n\r\n{}\r\n\r\n", csvResults);
+
             SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());
 
             printDataToComponent(stringFileHeaderData, bitmapFileHeaderTextArea);
             printDataToComponent(stringInfoHeaderData, dibHeaderTextArea);
             printDataToComponent(grayscaleOutputPath, grayscaleOutput);
             printDataToComponent(invertOutputPath, invertOutput);
+            
             break;
         }
         case 7: 
@@ -389,10 +404,3 @@ int WINAPI WinMain(
 
     return (int)msg.wParam;
 }
-
-
-//int main() {
-//    writeComputerCharacteristics(INFO_FILE_PATH);
-//    applyImageTransformations(IMAGE_PATH);
-//    return 0;
-//}
