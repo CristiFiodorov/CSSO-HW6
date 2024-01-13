@@ -243,7 +243,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 
                 testResults.clear();
 
-                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults);
+                applyImageTransformations(imagePath, nrCPU, testingMethods, { stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults });
 
                 std::string stringTestResults = getStringFromTestResults(testResults);
                 SetWindowText(testsPerformanceTextArea, stringTestResults.c_str());

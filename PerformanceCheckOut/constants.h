@@ -123,6 +123,28 @@ typedef struct DynamicThreadParams {
 } DYNAMIC_THREAD_PARAMS, * LPDYNAMIC_THREAD_PARAMS;
 
 
+typedef struct ImageTransformationsResults {
+    std::string& stringFileHeaderData;
+    std::string& stringInfoHeaderData;
+    std::string& grayscaleOutputPath; 
+    std::string& invertOutputPath; 
+    std::vector<TEST_RESULT>& testResults;
+} IMAGE_TRANSFORMATION_RESULTS, *LPIMAGE_TRANSFORMATION_RESULTS;
+
+typedef struct BmpImageInfo {
+    HANDLE hImage; 
+    LPCSTR imageName;
+    BITMAPFILEHEADER bMapFileHeader; 
+    BITMAPINFOHEADER bMapInfoHeader;
+} BMP_IMAGE_INFO, *LPBMP_IMAGE_INFO;
+
+typedef struct TransformationInfo {
+    DWORD nrCPU;
+    LPCSTR operationName;
+    FileTransformFunction fileTransform; 
+    PixelTransformFunction pixelTransform; 
+} TRANSFORMATION_INFO, *LPTRANSFORMATION_INFO;
+
 
 #define IMAGE_PATH "C:\\Facultate\\CSSO\\Week6\\date\\forest.bmp"
 #define CHUNK_SIZE 0x4000

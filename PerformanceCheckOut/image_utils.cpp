@@ -8,7 +8,7 @@ DWORD extractBmpHeaders(HANDLE hImage, PBITMAPFILEHEADER bMapFileHeader, PBITMAP
 }
 
 
-DWORD appendBmapHeadersToFile(HANDLE hFile, BITMAPFILEHEADER& bMapFileHeader, BITMAPINFOHEADER& bMapInfoHeader) {
+DWORD appendBmapHeadersToFile(HANDLE hFile, const BITMAPFILEHEADER& bMapFileHeader, const BITMAPINFOHEADER& bMapInfoHeader) {
     DWORD bytesWritten;
 
     CHECK(WriteFile(hFile, &bMapFileHeader, sizeof(bMapFileHeader), &bytesWritten, NULL), -1, "Error when writing into file");
@@ -33,27 +33,24 @@ DWORD applyInvertBytesTransform(LPRGBA_PIXEL pixel) {
     return 0;
 }
 
-DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName, 
-    BITMAPFILEHEADER& bMapFileHeader, BITMAPINFOHEADER& bMapInfoHeader,
-    FileTransformFunction fileTransform, PixelTransformFunction pixelTransform, 
-    LPCSTR resultFolder, LPCSTR guiResultsFolder, LPCSTR operationName, 
-    std::string& outputPath) {
+DWORD applyImageTransformation(const BMP_IMAGE_INFO& bmpImageInfo, const TRANSFORMATION_INFO& transformationInfo,
+    LPCSTR resultFolder, LPCSTR guiResultsFolder, std::string& outputPath) {
 
     LARGE_INTEGER startTime, endTime;
     QueryPerformanceCounter(&startTime);
 
-    CHECK(SetFilePointer(hImage, bMapFileHeader.bfOffBits, NULL, FILE_BEGIN) != INVALID_SET_FILE_POINTER, -1, "Setting the file pointer failed");
+    CHECK(SetFilePointer(bmpImageInfo.hImage, bmpImageInfo.bMapFileHeader.bfOffBits, NULL, FILE_BEGIN) != INVALID_SET_FILE_POINTER, -1, "Setting the file pointer failed");
 
     CHAR resultImagePath[MAX_PATH];
-    sprintf_s(resultImagePath, "%s\\%s_%s_temp.bmp", resultFolder, imageName, operationName);
+    sprintf_s(resultImagePath, "%s\\%s_%s_temp.bmp", resultFolder, bmpImageInfo.imageName, transformationInfo.operationName);
 
     HANDLE hResult = CreateFile(resultImagePath, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     CHECK(hResult != INVALID_HANDLE_VALUE, -1, "Opening the results file failed");
 
-    CHECK(appendBmapHeadersToFile(hResult, bMapFileHeader, bMapInfoHeader) == 0, -1, "Headers could not be appended",
+    CHECK(appendBmapHeadersToFile(hResult, bmpImageInfo.bMapFileHeader, bmpImageInfo.bMapInfoHeader) == 0, -1, "Headers could not be appended",
         CLOSE_HANDLES(hResult));
 
-    CHECK(fileTransform(hImage, hResult, pixelTransform, bMapFileHeader.bfOffBits, nrCPU) == 0, -1, "Transformation failed",
+    CHECK(transformationInfo.fileTransform(bmpImageInfo.hImage, hResult, transformationInfo.pixelTransform, bmpImageInfo.bMapFileHeader.bfOffBits, transformationInfo.nrCPU) == 0, -1, "Transformation failed",
         CLOSE_HANDLES(hResult));
 
     CLOSE_HANDLES(hResult);
@@ -67,12 +64,12 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     CHAR oldImagePath[MAX_PATH];
     memcpy(oldImagePath, resultImagePath, MAX_PATH);
 
-    sprintf_s(resultImagePath, "%s\\%s_%s_%d_%d.bmp", resultFolder, imageName, operationName, nrCPU, elapsedMilliseconds);
+    sprintf_s(resultImagePath, "%s\\%s_%s_%d_%d.bmp", resultFolder, bmpImageInfo.imageName, transformationInfo.operationName, transformationInfo.nrCPU, elapsedMilliseconds);
     CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
 
     CHAR guiResultImagePath[MAX_PATH];
     memset(guiResultImagePath, 0, sizeof(guiResultImagePath));
-    sprintf_s(guiResultImagePath, "%s\\%s_%s.bmp", guiResultsFolder, imageName, operationName);
+    sprintf_s(guiResultImagePath, "%s\\%s_%s.bmp", guiResultsFolder, bmpImageInfo.imageName, transformationInfo.operationName);
     CopyFile(resultImagePath, guiResultImagePath, TRUE);
     
     outputPath = guiResultImagePath;
@@ -81,8 +78,7 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
     return elapsedMilliseconds;
 }
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData,
-    std::string& grayscaleOutputPath, std::string& invertOutputPath, std::vector<TEST_RESULT>& testResults) {
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TRANSFORMATION_UTIL>& transformationUtils, const IMAGE_TRANSFORMATION_RESULTS& imageTransformationResults) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -97,8 +93,8 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
     CHECK(bMapInfoHeader.biCompression == 0, -1, "The application supports only compression method None");
     CHECK(bMapFileHeader.bfOffBits < GetFileSize(hImage, NULL), -1, "The offset where the image data begins is invalid");
 
-    getStringFileHeaderData(bMapFileHeader, stringFileHeaderData);
-    getStringInfoHeaderData(bMapInfoHeader, stringInfoHeaderData);
+    getStringFileHeaderData(bMapFileHeader, imageTransformationResults.stringFileHeaderData);
+    getStringInfoHeaderData(bMapInfoHeader, imageTransformationResults.stringInfoHeaderData);
 
     CHAR imagePathCopy[MAX_PATH];
     memset(imagePathCopy, 0, sizeof(imagePathCopy));
@@ -108,18 +104,18 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
     CHECK(imageName != imagePath, -1, "Could not extract the image name");
     PathRemoveExtension(imageName);
 
-
+    BMP_IMAGE_INFO bmpImageInfo = { hImage, imageName, bMapFileHeader, bMapInfoHeader };
     for (auto& transformationUtil : transformationUtils) {
         for (DWORD nrCPU = 1; nrCPU <= totalNrCPU * 2; ++nrCPU) {
-            DWORD elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, 
-                RESULTS_GENERAL_FOLDER, SZ_GRAYSCALE_OPERATION, grayscaleOutputPath);
+            TRANSFORMATION_INFO transformation_info = { nrCPU, SZ_GRAYSCALE_OPERATION, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform };
+            DWORD elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, RESULTS_GENERAL_FOLDER, imageTransformationResults.grayscaleOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
-            testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
+            imageTransformationResults.testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
 
-            elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, 
-                RESULTS_GENERAL_FOLDER, SZ_INVERT_BYTE_OPERATION, invertOutputPath);
+            transformation_info = { nrCPU, SZ_INVERT_BYTE_OPERATION, transformationUtil.fileTransformFunction, applyInvertBytesTransform };
+            elapsedMilliseconds = applyImageTransformation(bmpImageInfo, transformation_info, transformationUtil.resultsFolder, RESULTS_GENERAL_FOLDER, imageTransformationResults.invertOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Invert Bytes Transformation Failed", CLOSE_HANDLES(hImage));
-            testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
+            imageTransformationResults.testResults.push_back({ transformationUtil.transformationName, nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
 
             if (!transformationUtil.iterate) {
                 break;
