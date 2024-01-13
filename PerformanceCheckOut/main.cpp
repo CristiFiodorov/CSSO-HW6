@@ -121,7 +121,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 30,
             THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
-        grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+        grayscaleOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
             THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
             6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + 45,
             THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
@@ -131,7 +131,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             5 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 60,
             THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
 
-        invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_READONLY,
+        invertOutput = CreateWindow("Edit", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_AUTOHSCROLL | ES_AUTOVSCROLL | ES_READONLY | ES_MULTILINE,
             THIRD_WIDTH_PART + VERTICAL_LINE_WIDTH,
             6 * HEADER_HEIGHT + CHECKBOX_COMPONENT_HEIGHT + OUTPUT_COMPONENT_HEIGHT + 75,
             THIRD_WIDTH_PART, HEADER_HEIGHT, hWnd, NULL, NULL, NULL);
@@ -170,10 +170,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         break;
     case WM_COMMAND:
-    {
-        DWORD ceva = LOWORD(wParam);
-        printf("ceva");
-    }
         switch (LOWORD(wParam))
         {
         case 2:
@@ -242,18 +238,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
                 std::string stringFileHeaderData; 
                 std::string stringInfoHeaderData;
+                std::string grayscaleOutputPath;
+                std::string invertOutputPath;
+                
                 testResults.clear();
-                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData, testResults);
+
+                applyImageTransformations(imagePath, nrCPU, testingMethods, stringFileHeaderData, stringInfoHeaderData, grayscaleOutputPath, invertOutputPath, testResults);
 
                 LPSTR textToPrint = new CHAR[stringFileHeaderData.size() + 1];
                 memcpy(textToPrint, stringFileHeaderData.c_str(), stringFileHeaderData.size() + 1);
                 addCarriageReturnToBuffer(&textToPrint);
                 SetWindowText(bitmapFileHeaderTextArea, textToPrint);
+                delete[] textToPrint;
 
                 textToPrint = new CHAR[stringInfoHeaderData.size() + 1];
                 memcpy(textToPrint, stringInfoHeaderData.c_str(), stringInfoHeaderData.size() + 1);
                 addCarriageReturnToBuffer(&textToPrint);
                 SetWindowText(dibHeaderTextArea, textToPrint);
+                delete[] textToPrint;
+
+                textToPrint = new CHAR[grayscaleOutputPath.size() + 1];
+                memcpy(textToPrint, grayscaleOutputPath.c_str(), grayscaleOutputPath.size() + 1);
+                addCarriageReturnToBuffer(&textToPrint);
+                SetWindowText(grayscaleOutput, textToPrint);
+                delete[] textToPrint;
+
+                textToPrint = new CHAR[invertOutputPath.size() + 1];
+                memcpy(textToPrint, invertOutputPath.c_str(), invertOutputPath.size() + 1);
+                addCarriageReturnToBuffer(&textToPrint);
+                SetWindowText(invertOutput, textToPrint);
+                delete[] textToPrint;
+
             }
             break;
         }
@@ -284,6 +299,9 @@ int WINAPI WinMain(
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     result = SHCreateDirectoryEx(NULL, RESULTS_DYNAMIC_FOLDER, NULL);
+    CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
+
+    result = SHCreateDirectoryEx(NULL, RESULTS_GENERAL_FOLDER, NULL);
     CHECK(result == ERROR_SUCCESS || result == ERROR_FILE_EXISTS || result == ERROR_ALREADY_EXISTS, 1, "Folder creation failed");
 
     WNDCLASSEX wcex;

@@ -132,6 +132,8 @@ typedef struct DynamicThreadParams {
 
 #define INFO_FILE_PATH "C:\\Facultate\\CSSO\\Week6\\info.txt"
 
+#define RESULTS_GENERAL_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\general"
+
 #define RESULTS_SEQ_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\secvential"
 #define RESULTS_STATIC_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\static"
 #define RESULTS_DYNAMIC_FOLDER "C:\\Facultate\\CSSO\\Week6\\rezultate\\dinamic"

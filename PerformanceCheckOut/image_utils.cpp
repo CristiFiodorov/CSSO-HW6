@@ -36,7 +36,8 @@ DWORD applyInvertBytesTransform(LPRGBA_PIXEL pixel) {
 DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName, 
     BITMAPFILEHEADER& bMapFileHeader, BITMAPINFOHEADER& bMapInfoHeader,
     FileTransformFunction fileTransform, PixelTransformFunction pixelTransform, 
-    LPCSTR resultFolder, LPCSTR operationName) {
+    LPCSTR resultFolder, LPCSTR guiResultsFolder, LPCSTR operationName, 
+    std::string& outputPath) {
 
     LARGE_INTEGER startTime, endTime;
     QueryPerformanceCounter(&startTime);
@@ -68,12 +69,20 @@ DWORD applyImageTransformation(DWORD nrCPU, HANDLE hImage, LPCSTR imageName,
 
     sprintf_s(resultImagePath, "%s\\%s_%s_%d_%d.bmp", resultFolder, imageName, operationName, nrCPU, elapsedMilliseconds);
     CHECK(MoveFile(oldImagePath, resultImagePath), -1, "Error when naming the file");
+
+    CHAR guiResultImagePath[MAX_PATH];
+    memset(guiResultImagePath, 0, sizeof(guiResultImagePath));
+    sprintf_s(guiResultImagePath, "%s\\%s_%s.bmp", guiResultsFolder, imageName, operationName);
+    CopyFile(resultImagePath, guiResultImagePath, TRUE);
+    
+    outputPath = guiResultImagePath;
     setFileReadPermissionOnly(resultImagePath);
 
     return elapsedMilliseconds;
 }
 
-DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData, std::vector<TEST_RESULT>& testResults) {
+DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::set<TransformationUtil>& transformationUtils, std::string& stringFileHeaderData, std::string& stringInfoHeaderData,
+    std::string& grayscaleOutputPath, std::string& invertOutputPath, std::vector<TEST_RESULT>& testResults) {
     HANDLE hImage = CreateFile(imagePath, GENERIC_READ,
         NULL, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
     CHECK(hImage != INVALID_HANDLE_VALUE, -1, "Opening an existing file failed");
@@ -102,11 +111,13 @@ DWORD applyImageTransformations(LPCSTR imagePath, DWORD totalNrCPU, const std::s
 
     for (auto& transformationUtil : transformationUtils) {
         for (DWORD nrCPU = 1; nrCPU <= totalNrCPU * 2; ++nrCPU) {
-            DWORD elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, SZ_GRAYSCALE_OPERATION);
+            DWORD elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyPixelGrayscaleTransform, transformationUtil.resultsFolder, 
+                RESULTS_GENERAL_FOLDER, SZ_GRAYSCALE_OPERATION, grayscaleOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Grayscale Transformation Failed", CLOSE_HANDLES(hImage));
             testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_GRAYSCALE_OPERATION });
 
-            elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, SZ_INVERT_BYTE_OPERATION);
+            elapsedMilliseconds = applyImageTransformation(nrCPU, hImage, imageName, bMapFileHeader, bMapInfoHeader, transformationUtil.fileTransformFunction, applyInvertBytesTransform, transformationUtil.resultsFolder, 
+                RESULTS_GENERAL_FOLDER, SZ_INVERT_BYTE_OPERATION, invertOutputPath);
             CHECK(elapsedMilliseconds != -1, -1, "Invert Bytes Transformation Failed", CLOSE_HANDLES(hImage));
             testResults.push_back({ nrCPU, elapsedMilliseconds, SZ_INVERT_BYTE_OPERATION });
 
